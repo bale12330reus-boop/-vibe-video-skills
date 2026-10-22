@@ -1,0 +1,334 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, height=1080" />
+  <title>Vibe知识大赏 · 【主题】</title>
+  <!--
+    通用模板（来自「曼德拉效应」成片，博物馆纪录片风格）。
+    要改的只有 4 处，都标了【改】：
+      1. #root 和 #bgm 的 data-duration = 总时长（秒）
+      2. #stageAll 里每一幕一个 <section>，data-start / data-duration 按小节算
+      3. 脚本开头的 B0（第一重拍秒数）、BPM、END（总时长），从 scripts/beat.py 的输出抄
+      4. 「第 N 幕」代码块：照分镜一幕写一块
+    样式和小工具（揭开、打字机、图版、火漆封印、装饰线、翻页、数字往上数、翻牌）直接用，不用改。
+    完整的 8 幕写法见 examples/曼德拉效应/index.html。
+  -->
+  <!-- GSAP 本地副本（3.14.2），渲染时不走网络 -->
+  <script src="./assets/gsap.min.js"></script>
+  <style>
+    @font-face { font-family: "Noto Serif SC"; src: url("./assets/fonts/NotoSerifSC-VF.ttf") format("truetype"); font-weight: 200 900; }
+    @font-face { font-family: "Noto Sans SC"; src: url("./assets/fonts/NotoSansSC-VF.ttf") format("truetype"); font-weight: 100 900; }
+    @font-face { font-family: "Palatino Linotype"; src: local("Palatino Linotype"); }
+    @font-face { font-family: "Palatino Linotype"; src: local("Palatino Linotype Italic"), local("PalatinoLinotype-Italic"); font-style: italic; }
+
+    :root { --bg: #120d09; --bg2: #1d150e; --gold: #c6a265; --gold-dim: rgba(198,162,101,.45); --ivory: #ece4d4; --red: #8e2a22; --red2: #b8483b; }
+    body { margin: 0; background: #000; }
+    #root {
+      position: relative; width: 1920px; height: 1080px; overflow: hidden;
+      background: radial-gradient(70% 60% at 50% 38%, var(--bg2) 0%, var(--bg) 70%);
+      color: var(--ivory); font-family: "Noto Serif SC", serif;
+    }
+    .clip { position: absolute; inset: 0; }
+    #stageAll { position: absolute; inset: 0; z-index: 10; }
+    .scene { position: absolute; inset: 0; transform-origin: 50% 45%; }
+
+    /* 书页：双层金框 + 四角菱形（全片常驻） */
+    .pl { position: absolute; border: 1px solid var(--gold-dim); pointer-events: none; z-index: 20; }
+    #plate1 { inset: 54px; } #plate2 { inset: 64px; border-color: rgba(198,162,101,.22); }
+    .corner { position: absolute; width: 9px; height: 9px; background: var(--gold); transform: rotate(45deg); opacity: .7; z-index: 20; }
+    #sweep { position: absolute; top: 54px; bottom: 54px; left: 0; width: 2px; z-index: 21; visibility: hidden;
+      background: linear-gradient(transparent, var(--gold) 20%, var(--gold) 80%, transparent); box-shadow: 0 0 24px rgba(198,162,101,.7); }
+    #flash { position: absolute; inset: 0; z-index: 45; background: #f3dfb4; opacity: 0; pointer-events: none; mix-blend-mode: soft-light; }
+    #grain { position: absolute; inset: 0; z-index: 50; background: url("./assets/grain.png") repeat; background-size: 512px 512px; mix-blend-mode: soft-light; opacity: .22; pointer-events: none; }
+    #vignette { position: absolute; inset: 0; z-index: 49; background: radial-gradient(100% 90% at 50% 42%, transparent 50%, rgba(0,0,0,.66) 100%); pointer-events: none; }
+    #dust { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
+    .mote { position: absolute; border-radius: 50%; background: #f3e6c8; }
+    #fadeout { position: absolute; inset: 0; z-index: 60; background: #000; opacity: 0; }
+
+    /* 左上：年份 · 地点 · 人物；右上：出处 + 斜体原文 */
+    .lbl-tl { position: absolute; left: 120px; top: 104px; z-index: 40; }
+    .lbl-tl .lab { font-size: 22px; letter-spacing: 7px; color: var(--gold); font-weight: 500; white-space: nowrap; }
+    .lbl-tl .hair { width: 64px; height: 1px; background: var(--gold); margin-top: 16px; transform-origin: left; }
+    .lbl-tr { position: absolute; right: 120px; top: 98px; z-index: 40; width: 860px; text-align: right; }
+    .lbl-tr .src { font-family: "Palatino Linotype", Georgia, serif; font-size: 17px; letter-spacing: 5px; color: var(--gold); white-space: nowrap; }
+    .lbl-tr .quote { font-family: "Palatino Linotype", Georgia, serif; font-style: italic; font-size: 22px; line-height: 1.5; color: rgba(236,228,212,.62); margin-top: 10px; }
+
+    /* 文字块 */
+    .tb { position: absolute; z-index: 35; }
+    .tb.bottom { left: 160px; bottom: 150px; }
+    .tb.left { left: 160px; top: 50%; transform: translateY(-50%); width: 900px; }
+    .kick { font-size: 28px; letter-spacing: 10px; color: var(--gold); font-weight: 500; margin-bottom: 14px; white-space: nowrap; }
+    .main { font-size: 78px; font-weight: 700; letter-spacing: 3px; line-height: 1.3; white-space: nowrap; }
+    .main.xl { font-size: 150px; font-weight: 900; color: var(--red2); letter-spacing: 8px; }
+    .main .g { color: #e3c58f; }
+    .main .r { color: #d9705f; }
+    .main .dim { color: rgba(236,228,212,.55); }
+    .ul { background: linear-gradient(var(--red), var(--red)) no-repeat left 92% / 0% 6px; color: #e3c58f; }
+    .line2 { font-size: 56px; font-weight: 600; letter-spacing: 3px; color: var(--gold); margin-top: 6px; white-space: nowrap; }
+    .ch { opacity: 0; }
+    .strike { position: relative; display: inline-block; }
+    .strike i { position: absolute; left: -4%; right: -4%; top: 54%; height: 5px; background: var(--red); transform: scaleX(0); transform-origin: left; }
+
+    /* 馆藏图版 */
+    .plateimg { position: absolute; z-index: 15; background: #2a2017; padding: 24px; box-sizing: border-box;
+      box-shadow: 0 0 0 1px rgba(198,162,101,.55), 0 40px 90px rgba(0,0,0,.7); }
+    .plateimg .in { position: relative; width: 100%; height: 100%; overflow: hidden; }
+    .plateimg img { width: 100%; height: 100%; object-fit: cover; display: block; filter: sepia(.55) saturate(.55) brightness(.68) contrast(1.08); }
+    .plateimg .shade { position: absolute; inset: 0; background: #000; opacity: 0; }
+    .platecap { position: absolute; z-index: 15; font-family: "Palatino Linotype", serif; font-style: italic; font-size: 19px; color: rgba(236,228,212,.55); letter-spacing: 1px; white-space: nowrap; }
+
+    /* 火漆封印 */
+    .seal { position: absolute; z-index: 36; border-radius: 48% 52% 50% 50% / 52% 47% 53% 48%;
+      background: radial-gradient(circle at 38% 32%, #a8382d 0%, #7d221b 55%, #5a1711 100%);
+      box-shadow: 0 10px 24px rgba(0,0,0,.55), inset 0 0 0 6px rgba(0,0,0,.12), inset 0 0 0 9px rgba(255,210,170,.16);
+      display: flex; align-items: center; justify-content: center; color: #f0dcc0; font-weight: 900; letter-spacing: 4px; }
+    .seal.goldseal { background: radial-gradient(circle at 38% 32%, #d8b672 0%, #a98443 60%, #7a5d2c 100%); color: #2a1d10; }
+
+    /* 装饰线 */
+    .orn { position: absolute; left: 50%; width: 700px; margin-left: -350px; height: 12px; z-index: 15; }
+    .orn .l, .orn .r { position: absolute; top: 5px; height: 1px; width: 330px; background: var(--gold); }
+    .orn .l { left: 0; transform-origin: right center; } .orn .r { right: 0; transform-origin: left center; }
+    .orn .d { position: absolute; left: 345px; top: 1px; width: 10px; height: 10px; background: var(--gold); }
+
+    /* 中央主体通用 */
+    .subject { position: absolute; z-index: 15; }
+    .bigword { position: absolute; left: 0; right: 0; text-align: center; font-family: "Palatino Linotype", serif; font-style: italic; color: var(--ivory); z-index: 15; white-space: nowrap; }
+    .flip { display: inline-block; }
+
+    /* 第 1 幕：标本卡 */
+    #stage1 { position: absolute; left: 0; right: 0; top: 214px; height: 430px; perspective: 1600px; z-index: 15; }
+    #card { position: absolute; left: 50%; top: 0; width: 600px; height: 380px; margin-left: -300px; transform-style: preserve-3d; }
+    .face { position: absolute; inset: 0; border-radius: 6px; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+      background: linear-gradient(160deg, #e6dbc3 0%, #cfc1a3 100%); color: #3b2c1e;
+      box-shadow: 0 40px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(198,162,101,.5) inset, 0 0 0 9px #d9ccb0 inset, 0 0 0 10px rgba(120,90,50,.35) inset; }
+    .face.back { transform: rotateY(180deg); }
+    .face .hd { position: absolute; left: 0; right: 0; top: 34px; text-align: center; font-family: "Palatino Linotype", serif; font-size: 18px; letter-spacing: 8px; color: #7a5d34; }
+    .face .sub { position: absolute; left: 0; right: 0; top: 66px; text-align: center; font-size: 24px; letter-spacing: 6px; color: #4a3826; }
+    .sw { position: absolute; top: 128px; width: 132px; height: 132px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(60,40,20,.5), 0 8px 18px rgba(60,40,20,.35) inset; }
+    .swA { left: 118px; background: radial-gradient(circle at 38% 34%, #2a2420, #0f0c0a 70%); }
+    .swB { right: 118px; background: radial-gradient(circle at 38% 34%, #d8b862, #a9842f 75%); filter: saturate(.55) brightness(.92); }
+    .swC { left: 234px; background: radial-gradient(circle at 38% 34%, #d8b862, #a9842f 75%); filter: saturate(.55) brightness(.92); }
+    .lb { position: absolute; top: 282px; width: 220px; text-align: center; font-size: 26px; letter-spacing: 3px; color: #3b2c1e; font-weight: 600; }
+    .lbA { left: 74px; } .lbB { right: 74px; } .lbC { left: 0; right: 0; width: auto; }
+    #ring { position: absolute; left: 96px; top: 106px; width: 176px; height: 176px; overflow: visible; }
+    #light1 { position: absolute; left: 50%; top: -60px; width: 1100px; height: 700px; margin-left: -550px; background: radial-gradient(50% 50% at 50% 40%, rgba(255,226,170,.10), transparent 70%); }
+    .cd { position: absolute; right: 230px; bottom: 150px; width: 180px; height: 180px; z-index: 35; }
+    .cd svg { position: absolute; inset: 0; overflow: visible; }
+    .cd .num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: "Palatino Linotype", serif; font-size: 72px; color: var(--gold); letter-spacing: 4px; }
+
+    /* 第 2 幕：答题纸条 */
+    .slip { position: absolute; width: 250px; height: 74px; margin-left: -125px; margin-top: -37px; z-index: 16;
+      background: linear-gradient(170deg, #e4d8bf, #cbbd9f); border-radius: 3px; color: #3b2c1e;
+      box-shadow: 0 10px 22px rgba(0,0,0,.45), 0 0 0 1px rgba(120,90,50,.35) inset;
+      display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 600; letter-spacing: 4px; }
+
+    /* 第 6 幕：数据图 */
+    .chart { position: absolute; left: 330px; top: 230px; width: 1260px; height: 420px; z-index: 15; }
+    .chart .axis { position: absolute; left: 230px; right: 60px; bottom: 60px; height: 1px; background: rgba(198,162,101,.6); }
+    .chart .tick { position: absolute; bottom: 24px; font-family: "Palatino Linotype", serif; font-size: 20px; color: rgba(236,228,212,.5); transform: translateX(-50%); white-space: nowrap; }
+    .chart .grid { position: absolute; top: 20px; bottom: 60px; width: 1px; background: rgba(198,162,101,.14); }
+    .chart .row { position: absolute; left: 0; height: 74px; width: 100%; }
+    .chart .rl { position: absolute; left: 0; width: 200px; text-align: right; top: 14px; font-size: 34px; letter-spacing: 4px; }
+    .chart .bar { position: absolute; left: 230px; top: 10px; height: 54px; transform-origin: left center; }
+    .chart .val { position: absolute; top: 6px; font-family: "Palatino Linotype", serif; font-size: 46px; white-space: nowrap; }
+    .chart .unit { font-size: 22px; letter-spacing: 2px; color: rgba(236,228,212,.6); margin-left: 8px; font-family: "Noto Serif SC", serif; }
+
+    /* 第 7 幕：年份索引卡 */
+    .icard { position: absolute; width: 360px; height: 230px; z-index: 16; border-radius: 4px;
+      background: linear-gradient(165deg, #e6dbc3, #cdbf9f); color: #3b2c1e;
+      box-shadow: 0 30px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(198,162,101,.5) inset, 0 0 0 8px #d9ccb0 inset, 0 0 0 9px rgba(120,90,50,.35) inset; }
+    .icard .k { position: absolute; left: 0; right: 0; top: 26px; text-align: center; font-family: "Palatino Linotype", serif; font-size: 16px; letter-spacing: 7px; color: #7a5d34; }
+    .icard .y { position: absolute; left: 0; right: 0; top: 62px; text-align: center; font-family: "Palatino Linotype", serif; font-size: 112px; line-height: 1; color: #2e2216; }
+  </style>
+</head>
+<body>
+  <!-- 【改】data-duration = 总时长（秒）；竖屏改 data-width="1080" data-height="1920" 并重排版式 -->
+  <div id="root" data-composition-id="main" data-start="0" data-duration="12.00" data-width="1920" data-height="1080" data-fps="30">
+
+    <audio id="bgm" src="./assets/bgm.mp3" data-start="0" data-duration="12.00" data-volume="1" data-fade-out="1.2"></audio>
+
+    <!-- 【改】每一幕一个 section：data-start = bar(k) 的秒数，data-duration = 到下一幕开始的秒数 -->
+    <div id="stageAll">
+      <section id="sc1" class="clip scene" data-start="0" data-duration="12.00" data-track-index="1"></section>
+    </div>
+
+    <div class="pl" id="plate1"></div><div class="pl" id="plate2"></div>
+    <div class="corner" style="left:50px;top:50px"></div><div class="corner" style="right:50px;top:50px"></div>
+    <div class="corner" style="left:50px;bottom:50px"></div><div class="corner" style="right:50px;bottom:50px"></div>
+    <div id="sweep"></div>
+    <div id="dust"></div>
+    <div id="flash"></div>
+    <div id="vignette"></div>
+    <div id="grain"></div>
+    <div id="fadeout"></div>
+  </div>
+
+  <script>
+  (function () {
+    // ================= 基础：节拍、随机数、时间轴 =================
+    // 【改】B0 = beat.py 的 first_downbeat；112.25 换成 bpm；END = 总时长
+    // 时间一律用 bar(k)（第 k 小节第一拍）和 beat(k, n)（第 k 小节第 n 拍，n 从 0 开始）来写，切换才会卡在拍子上
+    const B0 = 0.134, BEAT = 60 / 112.25, BAR = BEAT * 4, FPS = 30, END = 12.00;
+    const bar = (k) => B0 + k * BAR;
+    const beat = (k, n) => bar(k) + n * BEAT;
+    let seed = 1654;
+    const rnd = () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const tl = gsap.timeline({ paused: true });
+    const $ = (s) => document.querySelector(s);
+    const IMG = "./assets/img/";
+
+    // ================= 小工具 =================
+    function mk(parent, cls, html, css) {
+      const d = document.createElement("div");
+      if (cls) d.className = cls;
+      if (html != null) d.innerHTML = html;
+      if (css) Object.assign(d.style, css);
+      parent.appendChild(d);
+      return d;
+    }
+    function svg(parent, cls, inner, css, vb) {
+      const w = document.createElement("div");
+      w.className = "subject " + (cls || "");
+      Object.assign(w.style, css || {});
+      w.innerHTML = `<svg viewBox="${vb}" width="100%" height="100%" style="overflow:visible">${inner}</svg>`;
+      parent.appendChild(w);
+      return w;
+    }
+    // 揭开：从左往右的遮罩擦出
+    function wipeIn(node, at, dur, ease) {
+      tl.fromTo(node, { clipPath: "inset(-30% 106% -30% -6%)" },
+        { clipPath: "inset(-30% -6% -30% -6%)", duration: dur || 0.35, ease: ease || "power2.inOut" }, at);
+    }
+    const hideAt = (node, t) => tl.set(node, { autoAlpha: 0 }, t);
+    function typewriter(node, text, at, per) {
+      node.innerHTML = [...text].map((c) => `<span class="ch">${c}</span>`).join("");
+      node.querySelectorAll(".ch").forEach((s, i) => tl.set(s, { opacity: 1 }, at + i * (per || 2 / FPS)));
+    }
+    // 文字块
+    function text(sc, o) {
+      const b = mk(sc, "tb " + (o.layout || "bottom"));
+      if (o.kick) { const k = mk(b, "kick"); typewriter(k, o.kick, o.kickAt != null ? o.kickAt : o.t0); b.kick = k; }
+      if (o.main) {
+        const m = mk(b, "main" + (o.xl ? " xl" : ""), o.main);
+        wipeIn(m, o.mainAt != null ? o.mainAt : (o.kick ? o.t0 + BEAT : o.t0), o.mainDur || 0.35);
+        b.main = m;
+      }
+      if (o.t1 != null) hideAt(b, o.t1);
+      return b;
+    }
+    // 暗红下划线描出
+    const underline = (node, at) => tl.fromTo(node, { backgroundSize: "0% 6px" }, { backgroundSize: "100% 6px", duration: 0.7, ease: "power2.inOut" }, at);
+    // 左上标签
+    function labelTL(sc, t0, t1, s) {
+      const L = mk(sc, "lbl-tl"); const lab = mk(L, "lab"); typewriter(lab, s, t0 + 0.05, 1.5 / FPS);
+      const hair = mk(L, "hair"); tl.fromTo(hair, { scaleX: 0 }, { scaleX: 1, duration: 0.8, ease: "power2.out" }, t0 + BEAT);
+      if (t1 != null) hideAt(L, t1);
+    }
+    // 右上手稿标题 + 斜体原文
+    function labelTR(sc, t0, t1, src, quote, quoteAt) {
+      const R = mk(sc, "lbl-tr");
+      const s = mk(R, "src", src); wipeIn(s, t0 + BEAT * 0.5, 0.9);
+      if (quote) { const q = mk(R, "quote", quote); wipeIn(q, quoteAt != null ? quoteAt : t0 + BEAT * 1.5, 1.4, "power1.inOut"); }
+      if (t1 != null) hideAt(R, t1);
+    }
+    // 馆藏图版
+    function plate(sc, o) {
+      const w = mk(sc, "plateimg", null, { left: o.x + "px", top: o.y + "px", width: o.w + "px", height: o.h + "px" });
+      const inn = mk(w, "in");
+      const img = document.createElement("img"); img.src = IMG + o.src; img.style.objectPosition = o.pos || "50% 50%"; inn.appendChild(img);
+      const shade = mk(inn, "shade");
+      wipeIn(w, o.t0, 0.8);
+      tl.fromTo(img, { scale: o.s0 || 1, rotation: 0 }, { scale: o.s1 || 1.06, rotation: o.rot || 0, duration: o.t1 - o.t0, ease: "none" }, o.t0);
+      if (o.cap) { const c = mk(sc, "platecap", o.cap, { left: o.x + "px", top: (o.y + o.h + 16) + "px" }); wipeIn(c, o.t0 + 0.5, 1.0); hideAt(c, o.t1); }
+      hideAt(w, o.t1);
+      w.img = img; w.shade = shade;
+      return w;
+    }
+    // 轻颤 + 书框亮一下
+    function shake(at) { tl.fromTo("#stageAll", { x: 0 }, { x: 3, duration: 1 / FPS, yoyo: true, repeat: 3, ease: "none", immediateRender: false }, at); }
+    function glow(at) {
+      tl.fromTo("#plate1", { borderColor: "rgba(240,210,150,1)" }, { borderColor: "rgba(198,162,101,.45)", duration: 0.9, ease: "power2.out", immediateRender: false }, at);
+      tl.fromTo("#flash", { opacity: 0.22 }, { opacity: 0, duration: 0.45, ease: "power2.out", immediateRender: false }, at);
+    }
+    // 火漆封印
+    function seal(sc, txt, x, y, size, at, gold, t1) {
+      const s = mk(sc, "seal" + (gold ? " goldseal" : ""), `<span>${txt}</span>`, { left: x + "px", top: y + "px", width: size + "px", height: size + "px", fontSize: Math.round(size * (txt.length > 3 ? 0.17 : 0.24)) + "px", letterSpacing: txt.length > 3 ? "1px" : "4px", whiteSpace: "nowrap", zIndex: 90 });
+      tl.fromTo(s, { scale: 1.6, rotation: -32, autoAlpha: 0 }, { scale: 1, rotation: -9, autoAlpha: 1, duration: 0.22, ease: "power4.in" }, at);
+      shake(at + 0.22);
+      if (t1 != null) hideAt(s, t1);
+      return s;
+    }
+    // 装饰线
+    function ornament(sc, t0, t1, y) {
+      const o = mk(sc, "orn", null, { top: (y || 440) + "px" });
+      const l = mk(o, "l"), r = mk(o, "r"), d = mk(o, "d");
+      tl.fromTo([l, r], { scaleX: 0 }, { scaleX: 1, duration: 1.1, ease: "power2.inOut" }, t0);
+      tl.fromTo(d, { scale: 0, rotation: 45 }, { scale: 1, rotation: 45, duration: 0.5, ease: "back.out(2)" }, t0 + 0.5);
+      if (t1 != null) hideAt(o, t1);
+      return o;
+    }
+    // 翻页：新的一幕从左往右擦进来，一道金线扫过
+    function sceneIn(id, t0, t1) {
+      tl.fromTo(id, { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.7, ease: "power2.inOut" }, t0);
+      tl.fromTo("#sweep", { x: 0, autoAlpha: 1 }, { x: 1920, duration: 0.7, ease: "power2.inOut", immediateRender: false }, t0);
+      tl.set("#sweep", { autoAlpha: 0 }, t0 + 0.72);
+      tl.fromTo(id, { scale: 1 }, { scale: 1.02, duration: t1 - t0, ease: "none" }, t0);
+    }
+    // 数字往上数
+    function countUp(node, from, to, at, dur, digits) {
+      const n = Math.round(dur * FPS);
+      for (let i = 0; i <= n; i++) {
+        const p = 1 - Math.pow(1 - i / n, 3);
+        tl.set(node, { textContent: (from + (to - from) * p).toFixed(digits) }, at + i / FPS);
+      }
+    }
+    // 翻牌：上下压扁再展开，中间换字
+    function flipText(node, at, newText) {
+      tl.to(node, { scaleY: 0, duration: 0.09, ease: "power1.in" }, at);
+      tl.set(node, { textContent: newText }, at + 0.09);
+      tl.to(node, { scaleY: 1, duration: 0.09, ease: "power1.out" }, at + 0.09);
+    }
+
+    // ================= 全片：颗粒、浮尘 =================
+    for (let t = 0; t < END; t += 1 / 8) tl.set("#grain", { backgroundPosition: `${Math.floor(rnd() * 512)}px ${Math.floor(rnd() * 512)}px` }, t);
+    const dust = $("#dust");
+    for (let i = 0; i < 60; i++) {
+      const s = 1 + rnd() * 2.6;
+      const m = mk(dust, "mote", null, { width: s + "px", height: s + "px", left: (rnd() * 1920) + "px", top: (rnd() * 1450) + "px", opacity: (0.12 + rnd() * 0.38).toFixed(2) });
+      if (s > 2.8) m.style.filter = "blur(1px)";
+      tl.fromTo(m, { x: 0, y: 0 }, { x: (rnd() - 0.45) * 240, y: -(160 + rnd() * 320), duration: END, ease: "none" }, 0);
+    }
+    // 书框金线：开场从中间向两边展开
+    tl.fromTo(["#plate1", "#plate2"], { clipPath: "inset(0 50% 0 50%)" }, { clipPath: "inset(0 0% 0 0%)", duration: 1.6, ease: "power2.inOut", stagger: 0.12 }, beat(0, 0));
+    tl.fromTo(".corner", { scale: 0 }, { scale: 1, duration: 0.5, ease: "back.out(2)", stagger: 0.06 }, beat(0, 0) + 1.2);
+
+    // ======================================================================
+    // 【改】第 1 幕 · 示例（照分镜一幕写一块；下一幕用 sceneIn 翻页进来）
+    // ======================================================================
+    {
+      const sc = $("#sc1"), T0 = 0, T1 = END;
+      tl.fromTo(sc, { scale: 1 }, { scale: 1.02, duration: T1 - T0, ease: "none" }, T0);  // 第 1 幕不翻页；第 2 幕起改成 sceneIn(sc, T0, T1)
+      labelTL(sc, T0, null, "年份 · 地点 · 人物");
+      labelTR(sc, T0, null, "SOURCE TITLE · MMXXVI", "“核对过出处的英文原句”", beat(0, 2));
+      // 图版：素材 → assets/img/；x/y/w/h 是像素位置；cap 是图注（作者 · 许可）
+      // plate(sc, { t0: bar(1), t1: bar(3), src: "01-xxx.jpg", x: 960, y: 220, w: 760, h: 520, cap: "Author · CC BY-SA 4.0" });
+      text(sc, { t0: beat(0, 0), t1: bar(2), kick: "考你一个问题", main: "第一屏的问题，<span class=\"g\">1 秒内</span>亮出", mainAt: 0.4 });  // 0.75 秒前完整出现
+      text(sc, { t0: bar(2), t1: bar(4), main: "答案落在<span class=\"r\">音乐变强</span>那一拍" });
+      seal(sc, "更正", 1480, 560, 150, beat(2, 0), false, bar(4));
+      glow(bar(2)); shake(bar(2));
+      ornament(sc, bar(4), null, 450);
+      text(sc, { t0: bar(4), t1: null, main: "你还知道什么？评论区说说" });
+      const foot = mk(sc, "platecap", "图片出处见简介 · 内容由 AI 生成", { left: "160px", top: "952px", fontStyle: "normal", fontFamily: "Noto Serif SC, serif", fontSize: "20px", letterSpacing: "4px" });
+      wipeIn(foot, bar(4) + BEAT, 1.0);
+      tl.fromTo("#fadeout", { opacity: 0 }, { opacity: 1, duration: 15 / FPS, ease: "power1.in" }, END - 15 / FPS);
+    }
+
+    // 时间轴必须暂停并注册成 main，HyperFrames 才能逐帧渲染
+    tl.set({}, {}, END);
+    window.__timelines = window.__timelines || {};
+    window.__timelines.main = tl;
+  })();
+  </script>
+</body>
+</html>

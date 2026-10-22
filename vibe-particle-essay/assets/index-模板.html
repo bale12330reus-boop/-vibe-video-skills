@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1920, height=1080" />
+<title>暗黑剪影随笔 · </title>
+<!--
+暗黑剪影随笔模板（逆向自叁号暗房爆款：纯黑底 + 剪影人物 + 发光象征物）。要改的只有 4 处，都标了：
+1. #root 和 #bgm 的 data-duration、脚本里的 END = 总时长（秒）
+2. 脚本里的 B0（beat.py 的 first_downbeat）和 BPM
+3. #stageAll 里每段一个 <section>
+4. 「演示」那几块代码：照分镜一段写一块
+预览某一刻：在地址后面加?t=秒数（无头浏览器截图用）。HyperFrames 渲染时不带参数，不受影响。
+场景库（画布）：figure symbridge pendulum puppets track stardust glowpath
+场景库（网页元素）：say hud chap ring formula chat checklist flash searchbox infocard watermark
+全片常驻：searchbox（左上伪搜索框）+ watermark（右上水印）。infocard（右上信息卡）按段落出现。
+-->
+<script src="./assets/gsap.min.js"></script>
+<style>
+@font-face { font-family: "Noto Serif SC"; src: url("./assets/fonts/NotoSerifSC-VF.ttf") format("truetype"), local("Noto Serif SC"), local("SimSun"); font-weight: 200 900;}
+:root { --ink: #f2f2f2; --dim: rgba(242,242,242,.55); --gold: #ffd27a; --cold: #a9dcff; --rust: #c14a2e; --dblue: #33507a; --mono: "Cascadia Mono", Consolas, "Courier New", monospace;}
+body { margin: 0; background: #000;}
+#root { position: relative; width: 1920px; height: 1080px; overflow: hidden; color: var(--ink);
+background: #000; font-family: "Noto Serif SC", "SimSun", serif;}
+.clip { position: absolute; inset: 0;}
+#fx { position: absolute; inset: 0; z-index: 12;}
+#stageAll { position: absolute; inset: 0; z-index: 30;}
+.scene { position: absolute; inset: 0;}
+
+/* 字幕：白色宋体居中 */
+.cap { position: absolute; left: 0; right: 0; text-align: center; white-space: nowrap; font-weight: 700; letter-spacing: 2px; line-height: 1.4;
+text-shadow: 0 0 16px rgba(255,255,255,.22), 0 0 2px rgba(255,255,255,.45); z-index: 35;}
+.cap.bottom { bottom: 112px;}.cap.top { top: 150px;}.cap.center { top: 50%; transform: translateY(-50%);}
+.cap.s { font-size: 34px; font-weight: 500;}.cap.m { font-size: 56px;}.cap.l { font-size: 84px;}.cap.xl { font-size: 150px; font-weight: 900; letter-spacing: 8px;}
+.cap.hook { font-size: 116px; font-weight: 900; letter-spacing: 6px;} /* 开场钩子：12 个字以内一行放得下 */
+.cap.sub { display: block; font-size: 32px; font-weight: 500; color: rgba(242,242,242,.78); margin-top: 18px; letter-spacing: 1px; text-shadow: none;}
+.cap.xl.sub { font-size: 34px;}
+.ch { display: inline-block; opacity: 0; white-space: pre;}
+.g { color: var(--gold); text-shadow: 0 0 22px rgba(255,210,122,.65);}
+.c { color: var(--cold); text-shadow: 0 0 22px rgba(169,220,255,.65);}
+.r { color: #e0684a; text-shadow: 0 0 22px rgba(224,104,74,.6);}
+.d { color: rgba(242,242,242,.38); text-shadow: none;}
+.en { display: block; font-family: Georgia, serif; font-size: 16px; letter-spacing: 6px; color: var(--dim); font-weight: 400; margin-top: 12px; text-shadow: none;}
+
+/* 左上伪搜索框（系列标识，全片常驻） */
+.searchbox { position: absolute; left: 84px; top: 62px; z-index: 40; display: flex; align-items: center; gap: 14px;
+padding: 13px 28px; border: 1px solid rgba(255,255,255,.30); border-radius: 999px; background: rgba(0,0,0,.55);
+font-size: 30px; font-weight: 700; letter-spacing: 2px; white-space: nowrap;}
+.searchbox.mag { opacity:.65; font-size: 26px;}
+/* 右上水印（全片常驻） */
+.watermark { position: absolute; right: 84px; top: 72px; z-index: 40; font-size: 22px; letter-spacing: 5px; color: rgba(242,242,242,.55); white-space: nowrap;}
+/* 右上信息卡（哲学家名片 / 引文出处 / 年代，按段落出现） */
+.infocard { position: absolute; right: 84px; top: 122px; z-index: 40; text-align: right; line-height: 1.9; white-space: nowrap;}
+.infocard.l1 { font-family: Georgia, serif; font-style: italic; font-size: 24px; letter-spacing: 2px; color: rgba(242,242,242,.85);}
+.infocard.l2 { font-family: "Noto Serif SC", serif; font-size: 22px; letter-spacing: 3px; color: var(--dim);}
+.infocard.l3 { font-family: var(--mono); font-size: 18px; letter-spacing: 2px; color: rgba(242,242,242,.45);}
+
+/* 数据 HUD / 左上计数器 */
+.hud { position: absolute; z-index: 36; font-family: var(--mono); color: var(--gold);}
+.hud.lab { font-family: "Noto Serif SC", serif; font-size: 22px; color: var(--dim); letter-spacing: 3px;}
+.hud.num { font-size: 84px; font-weight: 700; line-height: 1.1; text-shadow: 0 0 24px rgba(255,210,122,.5); white-space: nowrap;}
+.hud.bar { width: 280px; height: 2px; background: rgba(255,255,255,.12); margin-top: 10px;}
+.hud.bar i { display: block; height: 100%; background: var(--gold); transform-origin: left;}
+.hud.foot { font-family: var(--mono); font-size: 16px; color: var(--dim); margin-top: 8px;}
+.chap { position: absolute; left: 84px; top: 140px; z-index: 39; font-family: var(--mono); font-size: 20px; letter-spacing: 3px; color: rgba(255,210,122,.5); white-space: pre;}
+
+/* 公式 */
+.formula { position: absolute; z-index: 34; left: 50%; top: 170px; width: 640px; height: 700px; margin-left: -320px;}
+.formula svg { position: absolute; inset: 0; overflow: visible;}
+.formula.eq { position: absolute; left: 0; right: 0; top: 300px; text-align: center; font-family: Georgia, "Times New Roman", serif; font-style: italic; font-size: 82px; color: #fff; white-space: nowrap; text-shadow: 0 0 26px rgba(255,255,255,.4);}
+.formula.legend { position: absolute; left: 150px; top: 440px; font-size: 22px; line-height: 1.7; color: var(--dim); white-space: nowrap;}
+.formula.who { position: absolute; left: 0; right: 0; top: 610px; text-align: center; font-size: 20px; letter-spacing: 3px; color: var(--dim); white-space: nowrap;}
+
+/* 聊天气泡 */
+.chat { position: absolute; z-index: 34; left: 50%; top: 150px; width: 760px; margin-left: -380px;}
+.msg { position: relative; margin: 14px 0; display: flex;}
+.msg.r { justify-content: flex-end;}
+.msg.b { max-width: 520px; padding: 12px 18px; border-radius: 12px; font-family: "Noto Serif SC", serif; font-size: 22px; line-height: 1.5; font-weight: 600;}
+.msg.r.b { background: rgba(255,210,122,.14); border: 1px solid rgba(255,210,122,.5); color: #ffe3b0;}
+.msg.l.b { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); color: #dfe3e8;}
+.msg.tm { position: absolute; left: 0; right: 0; top: -20px; text-align: center; font-family: var(--mono); font-size: 13px; color: rgba(242,242,242,.35);}
+.msg.has-tm { margin-top: 40px;}
+
+/* 清单 */
+.todo { position: absolute; z-index: 35; left: 50%; margin-left: -180px; font-size: 30px; font-weight: 600; line-height: 1;}
+.todo.it { display: flex; align-items: center; margin: 22px 0; white-space: nowrap; opacity: 0;}
+.todo svg { width: 30px; height: 30px; margin-right: 16px; overflow: visible;}
+
+.ringmark { position: absolute; z-index: 36; overflow: visible; pointer-events: none;}
+#flash { position: absolute; inset: 0; z-index: 45; background: #fff3dc; opacity: 0; pointer-events: none;}
+#vignette { position: absolute; inset: 0; z-index: 48; background: radial-gradient(100% 90% at 50% 45%, transparent 60%, rgba(0,0,0,.55) 100%); pointer-events: none;}
+#grain { position: absolute; inset: 0; z-index: 50; background: url("./assets/grain.png") repeat; background-size: 512px 512px; mix-blend-mode: soft-light; opacity:.16; pointer-events: none;}
+#fadeout { position: absolute; inset: 0; z-index: 60; background: #000; opacity: 0;}
+</style>
+</head>
+<body>
+<!-- data-duration = 总时长 -->
+<div id="root" data-composition-id="main" data-start="0" data-duration="21.40" data-width="1920" data-height="1080" data-fps="30">
+<audio id="bgm" src="./assets/bgm.mp3" data-start="0" data-duration="21.40" data-volume="1" data-fade-out="1.2"></audio>
+<canvas id="fx" width="1920" height="1080"></canvas>
+<!-- 每段一个 section；data-start / data-duration 用小节算（演示只用一个） -->
+<div id="stageAll">
+<section id="sc1" class="clip scene" data-start="0" data-duration="21.40" data-track-index="1"></section>
+</div>
+<div id="flash"></div>
+<div id="vignette"></div>
+<div id="grain"></div>
+<div id="fadeout"></div>
+</div>
+
+<script>
+(function () {
+// ================= 基础 =================
+// B0 = first_downbeat；BPM；END = 总时长
+const B0 = 0.041, BPM = 112.25, BEAT = 60 / BPM, BAR = BEAT * 4, FPS = 30, END = 21.40;
+const W = 1920, H = 1080;
+const bar = (k) => B0 + k * BAR;
+const beat = (k, n) => bar(k) + n * BEAT;
+const $ = (s) => document.querySelector(s);
+const tl = gsap.timeline({ paused: true});
+// 带种子的随机数：每个场景自己 new 一个，加载时算好，渲染时只按时间画
+const mkRnd = (s) => () => { s |= 0; s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296;};
+const rnd = mkRnd(20261014);
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, p) => a + (b - a) * p;
+const seg = (x, a, b) => clamp((x - a) / (b - a)); // x 在 a→b 之间走到了几成
+const eo = (p) => 1 - Math.pow(1 - p, 3); // 缓出
+const eio = (p) => p <.5? 4 * p * p * p: 1 - Math.pow(-2 * p + 2, 3) / 2;
+const fadeIO = (lt, D, a =.4, b =.4) => Math.min(seg(lt, 0, a), 1 - seg(lt, D - b, D));
+// 按关键帧插值：keys = [{at,...数值}]，返回 lt 时刻的数值
+function keyed(keys, lt) {
+let k = 0; for (let j = 0; j < keys.length; j++) if (keys[j].at <= lt) k = j;
+const A = keys[k], B = keys[Math.min(k + 1, keys.length - 1)];
+const p = A === B? 0: eio(seg(lt, A.at, B.at)); const o = {};
+for (const key in A) if (key!== "at") o[key] = typeof A[key] === "number"? lerp(A[key], B[key], p): A[key];
+return o;
+}
+function mk(parent, cls, html, css) {
+const d = document.createElement("div"); if (cls) d.className = cls;
+if (html!= null) d.innerHTML = html; if (css) Object.assign(d.style, css);
+parent.appendChild(d); return d;
+}
+
+// ================= 画布引擎：所有画布场景都只根据时间画 =================
+const cv = $("#fx"), ctx = cv.getContext("2d");
+const painters = [];
+// paint(t0, t1, (ctx, 本场景内秒数 lt, 全片秒数 t, 场景时长 D) => {...}, 层级 z)
+function paint(t0, t1, fn, z = 0) { painters.push({ t0, t1, fn, z}); painters.sort((a, b) => a.z - b.z);}
+// HyperFrames 渲染时用 totalTime(t, true) 跳帧，会屏蔽 onUpdate 回调；
+// 所以用属性 setter：GSAP 每次写 clock.t 都会触发重画，跳到哪一帧都能画对
+const clock = { _t: 0, get t() { return this._t;}, set t(v) { this._t = v; render();}};
+function render() {
+const t = clock._t; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; ctx.clearRect(0, 0, W, H);
+for (const p of painters) if (t >= p.t0 && t < p.t1) { ctx.save(); p.fn(ctx, t - p.t0, t, p.t1 - p.t0); ctx.restore();}
+}
+// 发光贴图（预先画好，比 shadowBlur 快得多）
+const sprites = {};
+function glow(color) {
+if (sprites[color]) return sprites[color];
+const c = document.createElement("canvas"); c.width = c.height = 128; const g = c.getContext("2d");
+const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(.12, color); gr.addColorStop(.4, color.replace(/[\d.]+\)$/, ".25)")); gr.addColorStop(1, "rgba(0,0,0,0)");
+g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return (sprites[color] = c);
+}
+function glowAt(c, x, y, r, color, a = 1) { c.globalAlpha = a; c.globalCompositeOperation = "lighter"; c.drawImage(glow(color), x - r, y - r, r * 2, r * 2);}
+const RGBA = { gold: "rgba(255,210,122,1)", cold: "rgba(169,220,255,1)", rust: "rgba(193,74,46,1)", dblue: "rgba(120,150,200,1)", white: "rgba(255,255,255,1)", dimw: "rgba(232,232,232,1)"};
+const mixRGB = (a, b, p) => { const A = a.match(/[\d.]+/g).map(Number), B = b.match(/[\d.]+/g).map(Number); return `rgba(${Math.round(lerp(A[0], B[0], p))},${Math.round(lerp(A[1], B[1], p))},${Math.round(lerp(A[2], B[2], p))},1)`;};
+
+// ================= 网页元素：字幕 =================
+// 把一段 HTML 里的每个字包成.ch（保留.g/.c/.r 高亮 span）
+function splitChars(node) {
+const out = [];
+(function walk(n) {
+[...n.childNodes].forEach((c) => {
+if (c.nodeType === 3) { const f = document.createDocumentFragment(); [...c.textContent].forEach((ch) => { const s = document.createElement("span"); s.className = "ch"; s.textContent = ch; f.appendChild(s); out.push(s);}); c.replaceWith(f);}
+else if (c.nodeType === 1 &&!c.classList.contains("sub")) walk(c);
+});
+})(node);
+return out;
+}
+function revealChars(chars, at) {
+if (!chars.length) return at;
+const per = Math.min(0.05, 0.55 / chars.length);
+tl.fromTo(chars, { opacity: 0, y: 10, filter: "blur(10px)"}, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.45, ease: "power2.out", stagger: per}, at);
+return at + 0.45 + per * (chars.length - 1);
+}
+// say(sc, { t0, t1, html, pos: bottom|center|top, size: s|m|l|xl|hook, sub, subAt, en, instant, css})
+// instant: true = 开场钩子用。t0 那一帧字就完整显示，不逐字糊入（t0 = 0 时第 0 帧就有字）
+function say(sc, o) {
+const d = mk(sc, `cap ${o.pos || "bottom"} ${o.size || "m"}`, `<span class="mainline">${o.html}</span>`);
+if (o.css) Object.assign(d.style, o.css);
+const chars = splitChars(d.querySelector(".mainline"));
+let done;
+if (o.instant) { //.ch 在 CSS 里默认透明：从 0 秒开始的直接设为可见，其余在 t0 前 0.04 秒亮起
+if (o.t0 > 0.04) tl.fromTo(chars, { opacity: 0}, { opacity: 1, duration: 0.04}, o.t0 - 0.04);
+else gsap.set(chars, { opacity: 1});
+done = o.t0;
+}
+else done = revealChars(chars, o.t0);
+if (o.sub) { const s = mk(d, "sub", o.sub); done = Math.max(done, revealChars(splitChars(s), o.subAt!= null? o.subAt: o.t0 + BEAT * 2));}
+if (o.en) { const e = mk(d, "en", o.en); tl.fromTo(e, { opacity: 0}, { opacity: 1, duration:.8}, o.t0 +.3);}
+if (o.t1!= null) {
+if (done > o.t1 - 0.3) console.warn("say(): 入场没播完就离场了", o.html, done, o.t1);
+tl.fromTo(d, { opacity: 1, filter: "blur(0px)"}, { opacity: 0, filter: "blur(8px)", duration: 0.3, ease: "power1.in", immediateRender: false}, o.t1 - 0.3);
+tl.set(d, { autoAlpha: 0}, o.t1);
+}
+return d;
+}
+// 某几个字变暗（例：圈出关键词后其余字变暗）。sel 是 say() 返回的元素，from/to 是第几个字
+function dimChars(d, from, to, at) { const cs = [...d.querySelectorAll(".mainline.ch")].slice(from, to); tl.to(cs, { color: "rgba(242,242,242,.32)", textShadow: "none", duration:.5}, at);}
+
+// 数值滚动（逐帧 set，渲染可确定）
+function countTo(node, from, to, at, dur, fmt) {
+const n = Math.max(1, Math.round(dur * FPS));
+for (let i = 0; i <= n; i++) { const v = lerp(from, to, eio(i / n)); tl.set(node, { textContent: fmt(v)}, at + i / FPS);}
+}
+// hud(sc, { t0, t1, x, y, label, from, to, at, dur, fmt, foot})
+function hud(sc, o) {
+const d = mk(sc, "hud", null, { left: o.x + "px", top: o.y + "px"});
+mk(d, "lab", o.label || ""); const num = mk(d, "num", o.fmt(o.from)); const b = mk(d, "bar", "<i></i>");
+if (o.foot) mk(d, "foot", o.foot);
+tl.fromTo(d, { opacity: 0}, { opacity: 1, duration:.5}, o.t0);
+if (o.at!= null) { countTo(num, o.from, o.to, o.at, o.dur || 2, o.fmt); tl.fromTo(b.firstChild, { scaleX: o.barFrom?? 1}, { scaleX: o.barTo?? 0, duration: o.dur || 2, ease: "power2.inOut"}, o.at);}
+if (o.t1!= null) tl.set(d, { autoAlpha: 0}, o.t1);
+d.num = num; return d;
+}
+// chap(sc, { t0, t1, text: "DAY {n}", from, to, dur, pad}) —— 计数器改到左上搜索框下方，避免重叠
+function chap(sc, o) {
+const d = mk(sc, "chap"); const f = (v) => o.text.replace("{n}", String(Math.round(v)).padStart(o.pad || 4, "0"));
+d.textContent = f(o.from || 0); tl.fromTo(d, { opacity: 0}, { opacity: 1, duration:.4}, o.t0);
+if (o.to!= null) countTo(d, o.from, o.to, o.t0 + (o.delay || 0), o.dur || (o.t1 - o.t0), f);
+if (o.t1!= null) tl.set(d, { autoAlpha: 0}, o.t1);
+return d;
+}
+// 手绘圈：ring(sc, { x, y, w, h, at, t1})
+function ring(sc, o) {
+const s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("class", "ringmark");
+Object.assign(s.style, { left: o.x + "px", top: o.y + "px", width: o.w + "px", height: o.h + "px"});
+const w = o.w, h = o.h;
+s.innerHTML = `<path d="M ${w *.55} ${h *.04} C ${w * 1.02} ${h *.02}, ${w * 1.04} ${h *.96}, ${w *.5} ${h *.97} C ${w * -.04} ${h *.98}, ${w * -.03} ${h *.06}, ${w *.62} ${h *.1}" fill="none" stroke="#ffd27a" stroke-width="4" stroke-linecap="round" style="filter:drop-shadow(0 0 8px rgba(255,210,122,.8))"/>`;
+sc.appendChild(s); const p = s.querySelector("path"); const L = 2.4 * (w + h);
+tl.fromTo(p, { strokeDasharray: L, strokeDashoffset: L}, { strokeDashoffset: 0, duration:.7, ease: "power2.inOut"}, o.at);
+if (o.t1!= null) tl.set(s, { autoAlpha: 0}, o.t1);
+return s;
+}
+function flash(at, a =.55) { tl.fromTo("#flash", { opacity: a}, { opacity: 0, duration:.6, ease: "power2.out", immediateRender: false}, at);}
+
+// ================= 系列标识：伪搜索框 / 信息卡 / 水印 =================
+// searchbox(sc, { t0, t1, text}) —— 左上伪搜索框，全片常驻
+function searchbox(sc, o) {
+const d = mk(sc, "searchbox", `<span class="mag">⌕</span><span>${o.text}</span>`);
+tl.fromTo(d, { opacity: 0, y: -8}, { opacity: 1, y: 0, duration:.5, ease: "power2.out"}, o.t0);
+if (o.t1!= null) tl.set(d, { autoAlpha: 0}, o.t1);
+return d;
+}
+// infocard(sc, { t0, t1, l1, l2, l3}) —— 右上信息卡：英文名 / 中文名+生卒年 / 出处或年代
+function infocard(sc, o) {
+const d = mk(sc, "infocard", `${o.l1? `<div class="l1">${o.l1}</div>`: ""}${o.l2? `<div class="l2">${o.l2}</div>`: ""}${o.l3? `<div class="l3">${o.l3}</div>`: ""}`);
+tl.fromTo(d, { opacity: 0, x: 10}, { opacity: 1, x: 0, duration:.5, ease: "power2.out"}, o.t0);
+if (o.t1!= null) tl.set(d, { autoAlpha: 0}, o.t1);
+return d;
+}
+// watermark(sc, { t0, t1, name}) —— 右上水印，全片常驻
+function watermark(sc, o) {
+const d = mk(sc, "watermark", o.name);
+tl.fromTo(d, { opacity: 0}, { opacity:.55, duration:.8}, o.t0);
+if (o.t1!= null) tl.set(d, { autoAlpha: 0}, o.t1);
+return d;
+}
+
+// ================= 画布场景：暗黑剪影 =================
+// 剪影人物本体：drawFigure(c, x, y(脚底), s(身高px), pose, t, col)
+// pose: run（腿交替）| bend（力竭弯腰）| sit（静坐）| stand | walk
+function drawFigure(c, x, y, s, pose, t, col) {
+const u = s / 100;
+c.strokeStyle = col; c.fillStyle = col; c.lineWidth = 7 * u; c.lineCap = "round"; c.lineJoin = "round";
+const shY = y - 72 * u, hipY = y - 42 * u, headY = y - 86 * u, headR = 9 * u;
+const limb = (x1, y1, x2, y2) => { c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();};
+c.beginPath(); c.arc(x, headY, headR, 0, 6.283); c.fill();
+if (pose === "run") {
+const p = Math.sin(t * 7);
+limb(x, shY, x - 12 * u, hipY);
+limb(x - 12 * u, hipY, x - 12 * u + 20 * u * p, y);
+limb(x - 12 * u, hipY, x - 12 * u - 20 * u * p, y - 10 * u);
+limb(x - 12 * u, shY - 4 * u, x - 12 * u + 18 * u * p, shY + 20 * u);
+limb(x - 12 * u, shY - 4 * u, x - 12 * u - 18 * u * p, shY + 20 * u);
+} else if (pose === "bend") {
+limb(x, y - 38 * u, x + 12 * u, y - 62 * u);
+limb(x + 12 * u, y - 62 * u, x + 18 * u, y - 28 * u);
+limb(x + 12 * u, y - 62 * u, x + 26 * u, y - 30 * u);
+limb(x, y - 38 * u, x - 10 * u, y);
+limb(x, y - 38 * u, x + 8 * u, y);
+} else if (pose === "sit") {
+limb(x, y - 30 * u, x, y - 58 * u);
+limb(x, y - 30 * u, x + 28 * u, y - 30 * u);
+limb(x + 28 * u, y - 30 * u, x + 28 * u, y);
+limb(x, y - 58 * u, x - 8 * u, y - 2 * u);
+limb(x, y - 58 * u, x + 10 * u, y - 4 * u);
+} else {
+const p = pose === "walk"? Math.sin(t * 3.4): 0;
+limb(x, shY, x, hipY);
+limb(x, hipY, x + 11 * u * p, y);
+limb(x, hipY, x - 11 * u * p, y);
+limb(x, shY, x + 9 * u - 7 * u * p, shY + 27 * u);
+limb(x, shY, x - 9 * u + 7 * u * p, shY + 27 * u);
+}
+}
+// 剪影人物：figure({ t0, t1, x, y, s, pose, color, rim})
+// s 默认 110（约占画面 1/10）；人物是配角，永远不要画太大
+function figure(o) {
+const s = o.s || 110, col = o.color || RGBA.dimw, rim = o.rim || RGBA.white;
+paint(o.t0, o.t1, (c, lt, t, D) => {
+const al = o.alpha? o.alpha(lt, D): fadeIO(lt, D,.4,.4);
+if (al <= 0) return;
+const br =.75 +.25 * Math.sin(t * 1.6); // 呼吸感
+c.globalCompositeOperation = "lighter";
+glowAt(c, o.x, o.y - s *.5, s * 1.1, rim, al *.30 * br);
+c.globalCompositeOperation = "source-over"; c.globalAlpha = al;
+drawFigure(c, o.x, o.y, s, o.pose || "stand", t, col);
+}, o.z || 0);
+}
+// 发光拱桥：symbridge({ t0, t1, x1, x2, y, sag, color, draw:(lt,D)=>0..1})
+function symbridge(o) {
+paint(o.t0, o.t1, (c, lt, t, D) => {
+const p = o.draw? o.draw(lt, D): 1, al = o.alpha? o.alpha(lt, D): fadeIO(lt, D,.4,.4);
+if (p <= 0 || al <= 0) return;
+const x1 = o.x1?? 380, x2 = o.x2?? 1540, yB = o.y?? 780, sag = o.sag?? 260, col = o.color || RGBA.white;
+const mx = (x1 + x2) / 2;
+c.globalCompositeOperation = "lighter";
+glowAt(c, mx, yB - sag, 320, col, al *.16 * p);
+c.globalAlpha = al; c.strokeStyle = col; c.lineCap = "round"; c.lineWidth = 5;
+c.beginPath();
+const N = 40, n = Math.max(2, Math.round(N * p));
+for (let i = 0; i <= n; i++) {
+const q = i / N, x = lerp(x1, x2, q), y = yB - Math.sin(q * Math.PI) * sag;
+i? c.lineTo(x, y): c.moveTo(x, y);
+}
+c.stroke();
+c.globalAlpha = al *.5; c.lineWidth = 2;
+for (let i = 1; i < 5; i++) {
+const q = i / 5, x = lerp(x1, x2, q), yTop = yB - Math.sin(q * Math.PI) * sag;
+c.beginPath(); c.moveTo(x, yTop); c.lineTo(x, yB + 60); c.stroke();
+}
+c.globalAlpha = al *.35;
+c.beginPath(); c.moveTo(x1, yB + 60); c.lineTo(x2, yB + 60); c.stroke();
+}, o.z || 0);
+}
+// 钟摆：pendulum({ t0, t1, cx, top, len, amp, color, trail, swing:(lt,D)=>弧度})
+function pendulum(o) {
+const cx = o.cx?? W / 2, top = o.top?? 120, len = o.len?? 620, col = o.color || RGBA.gold;
+paint(o.t0, o.t1, (c, lt, t, D) => {
+const al = o.alpha? o.alpha(lt, D): fadeIO(lt, D,.4,.4);
+if (al <= 0) return;
+const sw = o.swing? o.swing(lt, D): Math.sin(lt * 1.5) * (o.amp??.55);
+const bx = cx + Math.sin(sw) * len, by = top + Math.cos(sw) * len;
+c.globalCompositeOperation = "lighter";
+if (o.trail) {
+c.globalAlpha = al *.25; c.strokeStyle = col; c.lineWidth = 1.5;
+c.beginPath(); c.arc(cx, top, len, Math.PI / 2 -.7, Math.PI / 2 +.7); c.stroke();
+}
+glowAt(c, bx, by, 120, col, al *.5);
+c.globalAlpha = al; c.strokeStyle = col; c.lineWidth = 2;
+c.beginPath(); c.moveTo(cx, top); c.lineTo(bx, by); c.stroke();
+c.globalCompositeOperation = "source-over";
+c.fillStyle = "#0c0c0e"; c.beginPath(); c.arc(bx, by, 26, 0, 6.283); c.fill();
+c.strokeStyle = col; c.lineWidth = 2.5; c.beginPath(); c.arc(bx, by, 26, 0, 6.283); c.stroke();
+c.globalCompositeOperation = "lighter";
+glowAt(c, bx, by, 20, RGBA.white, al *.8);
+}, o.z || 0);
+}
+// 提线木偶群：puppets({ t0, t1, n, x0, x1, topY, len, sway, color, seed})
+function puppets(o) {
+const R = mkRnd(o.seed || 91), n = o.n || 14, ps = [];
+for (let i = 0; i < n; i++) ps.push({ x: lerp(o.x0?? 300, o.x1?? 1620, n === 1?.5: i / (n - 1)) + (R() -.5) * 60, ph: R() * 6.28, sp:.6 + R() *.8, s: 70 + R() * 50});
+paint(o.t0, o.t1, (c, lt, t, D) => {
+const al = o.alpha? o.alpha(lt, D): fadeIO(lt, D,.4,.4);
+if (al <= 0) return;
+const col = o.color || RGBA.dimw, topY = o.topY?? 0, len = o.len?? 420;
+for (const p of ps) {
+const sw = Math.sin(t * p.sp + p.ph) * (o.sway?? 14);
+const hx = p.x + sw, hy = topY + len;
+c.globalCompositeOperation = "source-over"; c.globalAlpha = al *.5;
+c.strokeStyle = "rgba(200,200,200,.6)"; c.lineWidth = 1;
+c.beginPath(); c.moveTo(p.x, topY); c.lineTo(hx, hy); c.stroke();
+c.globalAlpha = al;
+drawFigure(c, hx, hy + p.s, p.s, "stand", t, col);
+}
+}, o.z || 0);
+}
+// 透视跑道：track({ t0, t1, yH, color})
+function track(o) {
+paint(o.t0, o.t1, (c, lt, t, D) => {
+const al = o.alpha? o.alpha(lt, D): fadeIO(lt, D,.4,.4);
+if (al <= 0) return;
+const yH = o.yH?? 480, col = o.color || RGBA.rust, vx = W / 2;
+c.globalCompositeOperation = "source-over"; c.globalAlpha = al;
+c.fillStyle = "rgba(193,74,46,.14)";
+c.beginPath(); c.moveTo(vx - 60, yH); c.lineTo(vx + 60, yH); c.lineTo(W, H); c.lineTo(0, H); c.closePath(); c.fill();
+c.strokeStyle = col; c.lineWidth = 2;
+for (let i = -4; i <= 4; i++) {
+c.globalAlpha = al *.8;
+c.beginPath(); c.moveTo(vx + i * 14, yH); c.lineTo(vx + i * 260, H); c.stroke();
+}
+c.globalAlpha = al *.5;
+for (let i = 0; i < 7; i++) {
+const p = i / 6, y = lerp(yH, H, p * p);
+c.beginPath(); c.moveTo(lerp(vx, 0, p * p), y); c.lineTo(lerp(vx, W, p * p), y); c.stroke();
+}
+c.globalCompositeOperation = "lighter";
+glowAt(c, vx, yH, 200, col, al *.25);
+}, o.z || 0);
+}
+// 星尘（全片常驻，很淡）：stardust(t0, t1, n)
+function stardust(t0, t1, n = 130) {
+const R = mkRnd(77), s = [];
+for (let i = 0; i < n; i++) s.push([R() * W, R() * H,.6 + R() * 1.4, R() * 6.28]);
+paint(t0, t1, (c, lt, t) => {
+c.globalCompositeOperation = "source-over"; c.fillStyle = "#dfe6f2";
+for (const [x, y, r, p] of s) { c.globalAlpha =.05 +.07 * Math.sin(t *.8 + p); c.fillRect(x, y, r, r);}
+}, -10);
+}
+// 发光轨迹：glowpath({ t0, t1, pts: [[x,y],...], color, draw:(lt,D)=>0..1, width})
+function glowpath(o) {
+paint(o.t0, o.t1, (c, lt, t, D) => {
+const p = o.draw? o.draw(lt, D): 1, al = o.alpha? o.alpha(lt, D): fadeIO(lt, D,.4,.4);
+if (p <= 0 || al <= 0) return;
+const pts = o.pts, col = o.color || RGBA.white, N = pts.length - 1, n = Math.max(1, Math.round(N * p));
+c.globalCompositeOperation = "lighter"; c.globalAlpha = al;
+c.strokeStyle = col; c.lineWidth = o.width || 3; c.lineCap = "round";
+c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
+for (let i = 1; i <= n; i++) c.lineTo(pts[i][0], pts[i][1]);
+c.stroke();
+const ex = pts[n][0], ey = pts[n][1];
+glowAt(c, ex, ey, 60, col, al *.7);
+}, o.z || 0);
+}
+
+// ================= 网页元素场景 =================
+// 公式：formula(sc, { t0, t1, eq, legend, who})
+function formula(sc, o) {
+const d = mk(sc, "formula", `<svg viewBox="0 0 640 700"><path class="arch" d="M 40 700 L 40 320 A 280 280 0 0 1 600 320 L 600 700" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.5"/><path class="base" d="M -60 700 L 700 700" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1"/></svg><div class="eq">${o.eq}</div><div class="legend">${o.legend || ""}</div><div class="who">${o.who || ""}</div>`);
+const arch = d.querySelector(".arch"), base = d.querySelector(".base");
+tl.fromTo(arch, { strokeDasharray: 1800, strokeDashoffset: 1800}, { strokeDashoffset: 0, duration: 1.6, ease: "power2.inOut"}, o.t0);
+tl.fromTo(base, { strokeDasharray: 800, strokeDashoffset: 800}, { strokeDashoffset: 0, duration: 1.0, ease: "power2.out"}, o.t0 +.4);
+revealChars(splitChars(d.querySelector(".eq")), o.t0 +.6);
+tl.fromTo(d.querySelector(".legend"), { opacity: 0}, { opacity: 1, duration:.6}, o.t0 + BEAT * 3);
+tl.fromTo(d.querySelector(".who"), { opacity: 0}, { opacity: 1, duration:.6}, o.t0 + BEAT * 4);
+if (o.t1!= null) { tl.fromTo(d, { opacity: 1}, { opacity: 0, duration:.4, immediateRender: false}, o.t1 -.4); tl.set(d, { autoAlpha: 0}, o.t1);}
+return d;
+}
+// 聊天记录：chat(sc, { t0, t1, msgs: [{ side: "r"|"l", text, at, tm}], coolAt, coolDur, scatterAt})
+function chat(sc, o) {
+const d = mk(sc, "chat"), R = mkRnd(o.seed || 81), ms = [];
+for (const m of o.msgs) {
+const e = mk(d, `msg ${m.side}${m.tm? " has-tm": ""}`, `${m.tm? `<div class="tm">${m.tm}</div>`: ""}<div class="b">${m.text}</div>`); ms.push(e);
+tl.fromTo(e, { opacity: 0, y: 12}, { opacity: 1, y: 0, duration:.35, ease: "power2.out"}, m.at);
+}
+if (o.coolAt!= null) tl.fromTo(d.querySelectorAll(".b"), { filter: "saturate(1) brightness(1)"}, { filter: "saturate(0) brightness(.7)", duration: o.coolDur || 1.6, ease: "none", immediateRender: false}, o.coolAt);
+if (o.scatterAt!= null) ms.forEach((e, i) => tl.fromTo(e, { x: 0, opacity: 1, filter: "blur(0px)"}, { x: (R() -.5) * 360, y: (R() -.5) * 220, opacity: 0, filter: "blur(10px)", duration: 1.1, ease: "power2.in", immediateRender: false}, o.scatterAt + i *.06));
+if (o.t1!= null) tl.set(d, { autoAlpha: 0}, o.t1);
+return d;
+}
+// 打勾清单：checklist(sc, { t0, t1, y, items: [{ html, at}]})
+function checklist(sc, o) {
+const d = mk(sc, "todo", null, { top: o.y + "px", marginLeft: (o.ml?? -180) + "px"});
+for (const it of o.items) {
+const e = mk(d, "it", `<svg viewBox="0 0 30 30"><path d="M3 16 L11 24 L27 6" fill="none" stroke="#ffd27a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${it.html}</span>`);
+tl.fromTo(e, { opacity: 0, x: -10}, { opacity: 1, x: 0, duration:.4, ease: "power2.out"}, it.at);
+tl.fromTo(e.querySelector("path"), { strokeDasharray: 40, strokeDashoffset: 40}, { strokeDashoffset: 0, duration:.35, ease: "power2.out"}, it.at +.1);
+}
+if (o.t1!= null) tl.set(d, { autoAlpha: 0}, o.t1);
+return d;
+}
+
+// ======================================================================
+// 演示：把每个场景都用了一遍（21.4 秒 = 10 小节）。照分镜一段写一块
+// ======================================================================
+const sc = $("#sc1");
+stardust(0, END);
+searchbox(sc, { t0: 0, t1: END, text: "权力意志 · 尼采"});
+watermark(sc, { t0: 0, t1: END, name: "暗房随笔"});
+
+// ① 钩子（第 0–1 小节，约 0–2 秒）：第 0 帧就有完整的字；跑道上的人已经在跑，不从黑屏长出来
+// 注意：alpha 用常数 1，不做淡入，否则第 0 帧看不到人
+track({ t0: 0, t1: bar(2), yH: 500, alpha: () => 1 });
+figure({ t0: 0, t1: bar(2), x: 960, y: 880, s: 150, pose: "run", rim: RGBA.rust, alpha: () => 1 });
+say(sc, { t0: 0, t1: bar(1), pos: "center", size: "hook", instant: true, html: '跑到一半想停下，<span class="r">不是你弱</span>。'});
+// ① 第二刀（第 1–2 小节）：硬切，加码，仍然不讲道理
+say(sc, { t0: bar(1), t1: bar(2), pos: "center", size: "l", instant: true, html: '那是身体，在<span class="g">保全自己</span>。'});
+
+// 象征物 · 桥（第 2–4 小节）：桥生长，两端各一个小人；右上信息卡
+symbridge({ t0: bar(2), t1: bar(4), draw: (lt, D) => eo(seg(lt, 0, 1.6))});
+figure({ t0: bar(2), t1: bar(4), x: 700, y: 830, s: 95, pose: "walk"});
+figure({ t0: bar(2), t1: bar(4), x: 1260, y: 700, s: 95, pose: "stand", rim: RGBA.gold});
+infocard(sc, { t0: bar(2), t1: bar(4), l1: "Also sprach Zarathustra", l2: "尼采 · 1883", l3: "引文出处"});
+say(sc, { t0: bar(2), t1: bar(4), html: '人是<span class="g">一座桥</span>，而不是终点。'});
+
+// 象征物 · 钟摆（第 4–6 小节）
+pendulum({ t0: bar(4), t1: bar(6), trail: true});
+say(sc, { t0: bar(4), t1: bar(6), html: '人生像钟摆，在<span class="c">痛苦</span>与<span class="c">无聊</span>之间摆荡。'});
+
+// 提线木偶群（第 6–8 小节）
+puppets({ t0: bar(6), t1: bar(8), n: 12});
+say(sc, { t0: bar(6), t1: bar(8), html: '我们都曾是<span class="d">提线木偶</span>。'});
+
+// 金句定格（第 8–10 小节）：白闪 + 超大金句，不做关注引导
+flash(bar(8),.4);
+say(sc, { t0: bar(8), t1: END, pos: "center", size: "xl", html: '<span class="g">成为你自己。</span>'});
+tl.fromTo("#fadeout", { opacity: 0}, { opacity: 1, duration:.5, ease: "power1.in", immediateRender: false}, END -.5);
+
+// ================= 注册（不要改） =================
+tl.fromTo(clock, { t: 0}, { t: END, duration: END, ease: "none"}, 0); // 画布时钟：驱动所有 paint()
+tl.set({}, {}, END);
+window.__timelines = window.__timelines || {};
+window.__timelines.main = tl;
+// 预览：index.html?t=12.5 直接跳到第 12.5 秒
+const q = new URLSearchParams(location.search);
+if (q.has("t")) { const go = () => { tl.totalTime(+q.get("t"), true); render();}; go(); if (document.fonts) document.fonts.ready.then(go);}
+})();
+</script>
+</body>
+</html>

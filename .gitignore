@@ -1,0 +1,18 @@
+# 渲染产物与本地项目文件（用 skill 时自动生成，不进仓库）
+renders/
+snapshots/
+samples/
+video/
+*-暗黑版/
+*-skill版/
+*-萌物版/
+bgm.mp3
+bgm-cut.mp3
+*.log
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+*.tmp
+node_modules/
+__pycache__/

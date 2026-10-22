@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, height=1080" />
+  <title>情绪内耗 · 整片</title>
+  <!--
+    纯黑 · 白色虚线点阵手绘风。整片 149.8 秒，33 幕，切点卡在 BGM 拍子上（112.25 BPM，first_downbeat 0.134）。
+    代码分四个文件：engine.js（引擎）→ scenes-a.js（1–11 幕）→ scenes-b.js（12–24 幕）→ scenes-c.js（25–33 幕 + 字幕 + 注册）
+    预览某一刻：index.html?t=秒数
+  -->
+  <script src="./assets/gsap.min.js"></script>
+  <style>
+    @font-face { font-family: "Noto Serif SC"; src: url("./assets/fonts/NotoSerifSC-VF.ttf") format("truetype"), local("SimSun"); font-weight: 200 900; }
+    body { margin: 0; background: #000; }
+    #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: #000; color: #fff; font-family: "Noto Serif SC", "SimSun", serif; }
+    .clip { position: absolute; inset: 0; }
+    #fx { position: absolute; inset: 0; z-index: 10; }
+    #glow { position: absolute; inset: 0; z-index: 9; filter: blur(7px); opacity: .9; }
+    #stageAll { position: absolute; inset: 0; z-index: 30; }
+    .cap { position: absolute; left: 0; right: 0; bottom: 92px; text-align: center; white-space: nowrap; font-size: 46px; font-weight: 400; letter-spacing: 6px; color: rgba(255,255,255,.92); }
+    .cap.s { font-size: 32px; letter-spacing: 4px; color: rgba(255,255,255,.7); }
+    .ch { display: inline-block; opacity: 0; white-space: pre; }
+    .cap .hl { color: #fff; font-weight: 700; }
+    #chap { position: absolute; left: 73px; top: 49px; z-index: 40; font-size: 34px; font-weight: 700; letter-spacing: 6px; color: #fff;
+            border-top: 1px solid rgba(255,255,255,.85); border-bottom: 1px solid rgba(255,255,255,.85); padding: 10px 4px; opacity: 0; }
+    #tag { position: absolute; right: 65px; top: 49px; z-index: 40; font-size: 24px; letter-spacing: 10px; color: rgba(255,255,255,.65);
+           border: 1px solid rgba(255,255,255,.45); padding: 12px 14px 12px 24px; opacity: 0; }
+    #vignette { position: absolute; inset: 0; z-index: 48; background: radial-gradient(100% 90% at 50% 48%, transparent 50%, rgba(0,0,0,.78) 100%); pointer-events: none; }
+    #grain { position: absolute; inset: 0; z-index: 50; background: url("./assets/grain.png") repeat; background-size: 512px 512px; mix-blend-mode: soft-light; opacity: .22; pointer-events: none; }
+    #fadeout { position: absolute; inset: 0; z-index: 60; background: #000; opacity: 0; }
+  </style>
+</head>
+<body>
+  <div id="root" data-composition-id="main" data-start="0" data-duration="149.8" data-width="1920" data-height="1080" data-fps="30">
+    <audio id="bgm" src="./assets/bgm.mp3" data-start="0" data-duration="149.8" data-volume="1" data-fade-out="1.5"></audio>
+    <canvas id="glow" width="1920" height="1080"></canvas>
+    <canvas id="fx" width="1920" height="1080"></canvas>
+    <div id="stageAll">
+      <section id="sc1" class="clip" data-start="0" data-duration="149.8" data-track-index="1"></section>
+    </div>
+        <div id="chap"><span>章节名（=主题，改这里）</span></div>
+    <div id="tag"><span>Vibe知识大赏</span></div>
+    <div id="vignette"></div>
+    <div id="grain"></div>
+    <div id="fadeout"></div>
+  </div>
+  <script src="./engine.js"></script>
+  <script src="./scenes-a.js"></script>
+  <script src="./scenes-b.js"></script>
+  <script src="./scenes-c.js"></script>
+</body>
+</html>

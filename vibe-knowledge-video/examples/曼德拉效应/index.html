@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, height=1080" />
+  <title>Vibe知识大赏 · 曼德拉效应</title>
+  <!-- GSAP 本地副本（3.14.2），渲染时不走网络 -->
+  <script src="./assets/gsap.min.js"></script>
+  <style>
+    @font-face { font-family: "Noto Serif SC"; src: url("./assets/fonts/NotoSerifSC-VF.ttf") format("truetype"); font-weight: 200 900; }
+    @font-face { font-family: "Noto Sans SC"; src: url("./assets/fonts/NotoSansSC-VF.ttf") format("truetype"); font-weight: 100 900; }
+    @font-face { font-family: "Palatino Linotype"; src: local("Palatino Linotype"); }
+    @font-face { font-family: "Palatino Linotype"; src: local("Palatino Linotype Italic"), local("PalatinoLinotype-Italic"); font-style: italic; }
+
+    :root { --bg: #120d09; --bg2: #1d150e; --gold: #c6a265; --gold-dim: rgba(198,162,101,.45); --ivory: #ece4d4; --red: #8e2a22; --red2: #b8483b; }
+    body { margin: 0; background: #000; }
+    #root {
+      position: relative; width: 1920px; height: 1080px; overflow: hidden;
+      background: radial-gradient(70% 60% at 50% 38%, var(--bg2) 0%, var(--bg) 70%);
+      color: var(--ivory); font-family: "Noto Serif SC", serif;
+    }
+    .clip { position: absolute; inset: 0; }
+    #stageAll { position: absolute; inset: 0; z-index: 10; }
+    .scene { position: absolute; inset: 0; transform-origin: 50% 45%; }
+
+    /* 书页：双层金框 + 四角菱形（全片常驻） */
+    .pl { position: absolute; border: 1px solid var(--gold-dim); pointer-events: none; z-index: 20; }
+    #plate1 { inset: 54px; } #plate2 { inset: 64px; border-color: rgba(198,162,101,.22); }
+    .corner { position: absolute; width: 9px; height: 9px; background: var(--gold); transform: rotate(45deg); opacity: .7; z-index: 20; }
+    #sweep { position: absolute; top: 54px; bottom: 54px; left: 0; width: 2px; z-index: 21; visibility: hidden;
+      background: linear-gradient(transparent, var(--gold) 20%, var(--gold) 80%, transparent); box-shadow: 0 0 24px rgba(198,162,101,.7); }
+    #flash { position: absolute; inset: 0; z-index: 45; background: #f3dfb4; opacity: 0; pointer-events: none; mix-blend-mode: soft-light; }
+    #grain { position: absolute; inset: 0; z-index: 50; background: url("./assets/grain.png") repeat; background-size: 512px 512px; mix-blend-mode: soft-light; opacity: .22; pointer-events: none; }
+    #vignette { position: absolute; inset: 0; z-index: 49; background: radial-gradient(100% 90% at 50% 42%, transparent 50%, rgba(0,0,0,.66) 100%); pointer-events: none; }
+    #dust { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
+    .mote { position: absolute; border-radius: 50%; background: #f3e6c8; }
+    #fadeout { position: absolute; inset: 0; z-index: 60; background: #000; opacity: 0; }
+
+    /* 左上：年份 · 地点 · 人物；右上：出处 + 斜体原文 */
+    .lbl-tl { position: absolute; left: 120px; top: 104px; z-index: 40; }
+    .lbl-tl .lab { font-size: 22px; letter-spacing: 7px; color: var(--gold); font-weight: 500; white-space: nowrap; }
+    .lbl-tl .hair { width: 64px; height: 1px; background: var(--gold); margin-top: 16px; transform-origin: left; }
+    .lbl-tr { position: absolute; right: 120px; top: 98px; z-index: 40; width: 860px; text-align: right; }
+    .lbl-tr .src { font-family: "Palatino Linotype", Georgia, serif; font-size: 17px; letter-spacing: 5px; color: var(--gold); white-space: nowrap; }
+    .lbl-tr .quote { font-family: "Palatino Linotype", Georgia, serif; font-style: italic; font-size: 22px; line-height: 1.5; color: rgba(236,228,212,.62); margin-top: 10px; }
+
+    /* 文字块 */
+    .tb { position: absolute; z-index: 35; }
+    .tb.bottom { left: 160px; bottom: 150px; }
+    .tb.left { left: 160px; top: 50%; transform: translateY(-50%); width: 900px; }
+    .kick { font-size: 28px; letter-spacing: 10px; color: var(--gold); font-weight: 500; margin-bottom: 14px; white-space: nowrap; }
+    .main { font-size: 78px; font-weight: 700; letter-spacing: 3px; line-height: 1.3; white-space: nowrap; }
+    .main.xl { font-size: 150px; font-weight: 900; color: var(--red2); letter-spacing: 8px; }
+    .main .g { color: #e3c58f; }
+    .main .r { color: #d9705f; }
+    .main .dim { color: rgba(236,228,212,.55); }
+    .ul { background: linear-gradient(var(--red), var(--red)) no-repeat left 92% / 0% 6px; color: #e3c58f; }
+    .line2 { font-size: 56px; font-weight: 600; letter-spacing: 3px; color: var(--gold); margin-top: 6px; white-space: nowrap; }
+    .ch { opacity: 0; }
+    .strike { position: relative; display: inline-block; }
+    .strike i { position: absolute; left: -4%; right: -4%; top: 54%; height: 5px; background: var(--red); transform: scaleX(0); transform-origin: left; }
+
+    /* 馆藏图版 */
+    .plateimg { position: absolute; z-index: 15; background: #2a2017; padding: 24px; box-sizing: border-box;
+      box-shadow: 0 0 0 1px rgba(198,162,101,.55), 0 40px 90px rgba(0,0,0,.7); }
+    .plateimg .in { position: relative; width: 100%; height: 100%; overflow: hidden; }
+    .plateimg img { width: 100%; height: 100%; object-fit: cover; display: block; filter: sepia(.55) saturate(.55) brightness(.68) contrast(1.08); }
+    .plateimg .shade { position: absolute; inset: 0; background: #000; opacity: 0; }
+    .platecap { position: absolute; z-index: 15; font-family: "Palatino Linotype", serif; font-style: italic; font-size: 19px; color: rgba(236,228,212,.55); letter-spacing: 1px; white-space: nowrap; }
+
+    /* 火漆封印 */
+    .seal { position: absolute; z-index: 36; border-radius: 48% 52% 50% 50% / 52% 47% 53% 48%;
+      background: radial-gradient(circle at 38% 32%, #a8382d 0%, #7d221b 55%, #5a1711 100%);
+      box-shadow: 0 10px 24px rgba(0,0,0,.55), inset 0 0 0 6px rgba(0,0,0,.12), inset 0 0 0 9px rgba(255,210,170,.16);
+      display: flex; align-items: center; justify-content: center; color: #f0dcc0; font-weight: 900; letter-spacing: 4px; }
+    .seal.goldseal { background: radial-gradient(circle at 38% 32%, #d8b672 0%, #a98443 60%, #7a5d2c 100%); color: #2a1d10; }
+
+    /* 装饰线 */
+    .orn { position: absolute; left: 50%; width: 700px; margin-left: -350px; height: 12px; z-index: 15; }
+    .orn .l, .orn .r { position: absolute; top: 5px; height: 1px; width: 330px; background: var(--gold); }
+    .orn .l { left: 0; transform-origin: right center; } .orn .r { right: 0; transform-origin: left center; }
+    .orn .d { position: absolute; left: 345px; top: 1px; width: 10px; height: 10px; background: var(--gold); }
+
+    /* 中央主体通用 */
+    .subject { position: absolute; z-index: 15; }
+    .bigword { position: absolute; left: 0; right: 0; text-align: center; font-family: "Palatino Linotype", serif; font-style: italic; color: var(--ivory); z-index: 15; white-space: nowrap; }
+    .flip { display: inline-block; }
+
+    /* 第 1 幕：标本卡 */
+    #stage1 { position: absolute; left: 0; right: 0; top: 214px; height: 430px; perspective: 1600px; z-index: 15; }
+    #card { position: absolute; left: 50%; top: 0; width: 600px; height: 380px; margin-left: -300px; transform-style: preserve-3d; }
+    .face { position: absolute; inset: 0; border-radius: 6px; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+      background: linear-gradient(160deg, #e6dbc3 0%, #cfc1a3 100%); color: #3b2c1e;
+      box-shadow: 0 40px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(198,162,101,.5) inset, 0 0 0 9px #d9ccb0 inset, 0 0 0 10px rgba(120,90,50,.35) inset; }
+    .face.back { transform: rotateY(180deg); }
+    .face .hd { position: absolute; left: 0; right: 0; top: 34px; text-align: center; font-family: "Palatino Linotype", serif; font-size: 18px; letter-spacing: 8px; color: #7a5d34; }
+    .face .sub { position: absolute; left: 0; right: 0; top: 66px; text-align: center; font-size: 24px; letter-spacing: 6px; color: #4a3826; }
+    .sw { position: absolute; top: 128px; width: 132px; height: 132px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(60,40,20,.5), 0 8px 18px rgba(60,40,20,.35) inset; }
+    .swA { left: 118px; background: radial-gradient(circle at 38% 34%, #2a2420, #0f0c0a 70%); }
+    .swB { right: 118px; background: radial-gradient(circle at 38% 34%, #d8b862, #a9842f 75%); filter: saturate(.55) brightness(.92); }
+    .swC { left: 234px; background: radial-gradient(circle at 38% 34%, #d8b862, #a9842f 75%); filter: saturate(.55) brightness(.92); }
+    .lb { position: absolute; top: 282px; width: 220px; text-align: center; font-size: 26px; letter-spacing: 3px; color: #3b2c1e; font-weight: 600; }
+    .lbA { left: 74px; } .lbB { right: 74px; } .lbC { left: 0; right: 0; width: auto; }
+    #ring { position: absolute; left: 96px; top: 106px; width: 176px; height: 176px; overflow: visible; }
+    #light1 { position: absolute; left: 50%; top: -60px; width: 1100px; height: 700px; margin-left: -550px; background: radial-gradient(50% 50% at 50% 40%, rgba(255,226,170,.10), transparent 70%); }
+    .cd { position: absolute; right: 230px; bottom: 150px; width: 180px; height: 180px; z-index: 35; }
+    .cd svg { position: absolute; inset: 0; overflow: visible; }
+    .cd .num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: "Palatino Linotype", serif; font-size: 72px; color: var(--gold); letter-spacing: 4px; }
+
+    /* 第 2 幕：答题纸条 */
+    .slip { position: absolute; width: 250px; height: 74px; margin-left: -125px; margin-top: -37px; z-index: 16;
+      background: linear-gradient(170deg, #e4d8bf, #cbbd9f); border-radius: 3px; color: #3b2c1e;
+      box-shadow: 0 10px 22px rgba(0,0,0,.45), 0 0 0 1px rgba(120,90,50,.35) inset;
+      display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 600; letter-spacing: 4px; }
+
+    /* 第 6 幕：数据图 */
+    .chart { position: absolute; left: 330px; top: 230px; width: 1260px; height: 420px; z-index: 15; }
+    .chart .axis { position: absolute; left: 230px; right: 60px; bottom: 60px; height: 1px; background: rgba(198,162,101,.6); }
+    .chart .tick { position: absolute; bottom: 24px; font-family: "Palatino Linotype", serif; font-size: 20px; color: rgba(236,228,212,.5); transform: translateX(-50%); white-space: nowrap; }
+    .chart .grid { position: absolute; top: 20px; bottom: 60px; width: 1px; background: rgba(198,162,101,.14); }
+    .chart .row { position: absolute; left: 0; height: 74px; width: 100%; }
+    .chart .rl { position: absolute; left: 0; width: 200px; text-align: right; top: 14px; font-size: 34px; letter-spacing: 4px; }
+    .chart .bar { position: absolute; left: 230px; top: 10px; height: 54px; transform-origin: left center; }
+    .chart .val { position: absolute; top: 6px; font-family: "Palatino Linotype", serif; font-size: 46px; white-space: nowrap; }
+    .chart .unit { font-size: 22px; letter-spacing: 2px; color: rgba(236,228,212,.6); margin-left: 8px; font-family: "Noto Serif SC", serif; }
+
+    /* 第 7 幕：年份索引卡 */
+    .icard { position: absolute; width: 360px; height: 230px; z-index: 16; border-radius: 4px;
+      background: linear-gradient(165deg, #e6dbc3, #cdbf9f); color: #3b2c1e;
+      box-shadow: 0 30px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(198,162,101,.5) inset, 0 0 0 8px #d9ccb0 inset, 0 0 0 9px rgba(120,90,50,.35) inset; }
+    .icard .k { position: absolute; left: 0; right: 0; top: 26px; text-align: center; font-family: "Palatino Linotype", serif; font-size: 16px; letter-spacing: 7px; color: #7a5d34; }
+    .icard .y { position: absolute; left: 0; right: 0; top: 62px; text-align: center; font-family: "Palatino Linotype", serif; font-size: 112px; line-height: 1; color: #2e2216; }
+  </style>
+</head>
+<body>
+  <div id="root" data-composition-id="main" data-start="0" data-duration="147.66" data-width="1920" data-height="1080" data-fps="30">
+
+    <audio id="bgm" src="./assets/bgm.mp3" data-start="0" data-duration="147.66" data-volume="1" data-fade-out="1.2"></audio>
+
+    <div id="stageAll">
+      <section id="sc1" class="clip scene" data-start="0" data-duration="23.652" data-track-index="1"></section>
+      <section id="sc2" class="clip scene" data-start="23.652" data-duration="10.691" data-track-index="1"></section>
+      <section id="sc3" class="clip scene" data-start="34.343" data-duration="21.381" data-track-index="1"></section>
+      <section id="sc4" class="clip scene" data-start="55.724" data-duration="14.966" data-track-index="1"></section>
+      <section id="sc5" class="clip scene" data-start="70.690" data-duration="19.243" data-track-index="1"></section>
+      <section id="sc6" class="clip scene" data-start="89.933" data-duration="25.657" data-track-index="1"></section>
+      <section id="sc7" class="clip scene" data-start="115.590" data-duration="19.243" data-track-index="1"></section>
+      <section id="sc8" class="clip scene" data-start="134.833" data-duration="12.827" data-track-index="1"></section>
+    </div>
+
+    <div class="pl" id="plate1"></div><div class="pl" id="plate2"></div>
+    <div class="corner" style="left:50px;top:50px"></div><div class="corner" style="right:50px;top:50px"></div>
+    <div class="corner" style="left:50px;bottom:50px"></div><div class="corner" style="right:50px;bottom:50px"></div>
+    <div id="sweep"></div>
+    <div id="dust"></div>
+    <div id="flash"></div>
+    <div id="vignette"></div>
+    <div id="grain"></div>
+    <div id="fadeout"></div>
+  </div>
+
+  <script>
+  (function () {
+    // ================= 基础：节拍、随机数、时间轴 =================
+    const B0 = 0.134, BEAT = 60 / 112.25, BAR = BEAT * 4, FPS = 30, END = 147.66;
+    const bar = (k) => B0 + k * BAR;
+    const beat = (k, n) => bar(k) + n * BEAT;
+    let seed = 1654;
+    const rnd = () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const tl = gsap.timeline({ paused: true });
+    const $ = (s) => document.querySelector(s);
+    const IMG = "./assets/img/";
+
+    // ================= 小工具 =================
+    function mk(parent, cls, html, css) {
+      const d = document.createElement("div");
+      if (cls) d.className = cls;
+      if (html != null) d.innerHTML = html;
+      if (css) Object.assign(d.style, css);
+      parent.appendChild(d);
+      return d;
+    }
+    function svg(parent, cls, inner, css, vb) {
+      const w = document.createElement("div");
+      w.className = "subject " + (cls || "");
+      Object.assign(w.style, css || {});
+      w.innerHTML = `<svg viewBox="${vb}" width="100%" height="100%" style="overflow:visible">${inner}</svg>`;
+      parent.appendChild(w);
+      return w;
+    }
+    // 揭开：从左往右的遮罩擦出
+    function wipeIn(node, at, dur, ease) {
+      tl.fromTo(node, { clipPath: "inset(-30% 106% -30% -6%)" },
+        { clipPath: "inset(-30% -6% -30% -6%)", duration: dur || 0.35, ease: ease || "power2.inOut" }, at);
+    }
+    const hideAt = (node, t) => tl.set(node, { autoAlpha: 0 }, t);
+    function typewriter(node, text, at, per) {
+      node.innerHTML = [...text].map((c) => `<span class="ch">${c}</span>`).join("");
+      node.querySelectorAll(".ch").forEach((s, i) => tl.set(s, { opacity: 1 }, at + i * (per || 2 / FPS)));
+    }
+    // 文字块
+    function text(sc, o) {
+      const b = mk(sc, "tb " + (o.layout || "bottom"));
+      if (o.kick) { const k = mk(b, "kick"); typewriter(k, o.kick, o.kickAt != null ? o.kickAt : o.t0); b.kick = k; }
+      if (o.main) {
+        const m = mk(b, "main" + (o.xl ? " xl" : ""), o.main);
+        wipeIn(m, o.mainAt != null ? o.mainAt : (o.kick ? o.t0 + BEAT : o.t0), o.mainDur || 0.35);
+        b.main = m;
+      }
+      if (o.t1 != null) hideAt(b, o.t1);
+      return b;
+    }
+    // 暗红下划线描出
+    const underline = (node, at) => tl.fromTo(node, { backgroundSize: "0% 6px" }, { backgroundSize: "100% 6px", duration: 0.7, ease: "power2.inOut" }, at);
+    // 左上标签
+    function labelTL(sc, t0, t1, s) {
+      const L = mk(sc, "lbl-tl"); const lab = mk(L, "lab"); typewriter(lab, s, t0 + 0.05, 1.5 / FPS);
+      const hair = mk(L, "hair"); tl.fromTo(hair, { scaleX: 0 }, { scaleX: 1, duration: 0.8, ease: "power2.out" }, t0 + BEAT);
+      if (t1 != null) hideAt(L, t1);
+    }
+    // 右上手稿标题 + 斜体原文
+    function labelTR(sc, t0, t1, src, quote, quoteAt) {
+      const R = mk(sc, "lbl-tr");
+      const s = mk(R, "src", src); wipeIn(s, t0 + BEAT * 0.5, 0.9);
+      if (quote) { const q = mk(R, "quote", quote); wipeIn(q, quoteAt != null ? quoteAt : t0 + BEAT * 1.5, 1.4, "power1.inOut"); }
+      if (t1 != null) hideAt(R, t1);
+    }
+    // 馆藏图版
+    function plate(sc, o) {
+      const w = mk(sc, "plateimg", null, { left: o.x + "px", top: o.y + "px", width: o.w + "px", height: o.h + "px" });
+      const inn = mk(w, "in");
+      const img = document.createElement("img"); img.src = IMG + o.src; img.style.objectPosition = o.pos || "50% 50%"; inn.appendChild(img);
+      const shade = mk(inn, "shade");
+      wipeIn(w, o.t0, 0.8);
+      tl.fromTo(img, { scale: o.s0 || 1, rotation: 0 }, { scale: o.s1 || 1.06, rotation: o.rot || 0, duration: o.t1 - o.t0, ease: "none" }, o.t0);
+      if (o.cap) { const c = mk(sc, "platecap", o.cap, { left: o.x + "px", top: (o.y + o.h + 16) + "px" }); wipeIn(c, o.t0 + 0.5, 1.0); hideAt(c, o.t1); }
+      hideAt(w, o.t1);
+      w.img = img; w.shade = shade;
+      return w;
+    }
+    // 轻颤 + 书框亮一下
+    function shake(at) { tl.fromTo("#stageAll", { x: 0 }, { x: 3, duration: 1 / FPS, yoyo: true, repeat: 3, ease: "none", immediateRender: false }, at); }
+    function glow(at) {
+      tl.fromTo("#plate1", { borderColor: "rgba(240,210,150,1)" }, { borderColor: "rgba(198,162,101,.45)", duration: 0.9, ease: "power2.out", immediateRender: false }, at);
+      tl.fromTo("#flash", { opacity: 0.22 }, { opacity: 0, duration: 0.45, ease: "power2.out", immediateRender: false }, at);
+    }
+    // 火漆封印
+    function seal(sc, txt, x, y, size, at, gold, t1) {
+      const s = mk(sc, "seal" + (gold ? " goldseal" : ""), `<span>${txt}</span>`, { left: x + "px", top: y + "px", width: size + "px", height: size + "px", fontSize: Math.round(size * 0.24) + "px", zIndex: 90 });
+      tl.fromTo(s, { scale: 1.6, rotation: -32, autoAlpha: 0 }, { scale: 1, rotation: -9, autoAlpha: 1, duration: 0.22, ease: "power4.in" }, at);
+      shake(at + 0.22);
+      if (t1 != null) hideAt(s, t1);
+      return s;
+    }
+    // 装饰线
+    function ornament(sc, t0, t1, y) {
+      const o = mk(sc, "orn", null, { top: (y || 440) + "px" });
+      const l = mk(o, "l"), r = mk(o, "r"), d = mk(o, "d");
+      tl.fromTo([l, r], { scaleX: 0 }, { scaleX: 1, duration: 1.1, ease: "power2.inOut" }, t0);
+      tl.fromTo(d, { scale: 0, rotation: 45 }, { scale: 1, rotation: 45, duration: 0.5, ease: "back.out(2)" }, t0 + 0.5);
+      if (t1 != null) hideAt(o, t1);
+      return o;
+    }
+    // 翻页：新的一幕从左往右擦进来，一道金线扫过
+    function sceneIn(id, t0, t1) {
+      tl.fromTo(id, { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.7, ease: "power2.inOut" }, t0);
+      tl.fromTo("#sweep", { x: 0, autoAlpha: 1 }, { x: 1920, duration: 0.7, ease: "power2.inOut", immediateRender: false }, t0);
+      tl.set("#sweep", { autoAlpha: 0 }, t0 + 0.72);
+      tl.fromTo(id, { scale: 1 }, { scale: 1.02, duration: t1 - t0, ease: "none" }, t0);
+    }
+    // 数字往上数
+    function countUp(node, from, to, at, dur, digits) {
+      const n = Math.round(dur * FPS);
+      for (let i = 0; i <= n; i++) {
+        const p = 1 - Math.pow(1 - i / n, 3);
+        tl.set(node, { textContent: (from + (to - from) * p).toFixed(digits) }, at + i / FPS);
+      }
+    }
+    // 翻牌：上下压扁再展开，中间换字
+    function flipText(node, at, newText) {
+      tl.to(node, { scaleY: 0, duration: 0.09, ease: "power1.in" }, at);
+      tl.set(node, { textContent: newText }, at + 0.09);
+      tl.to(node, { scaleY: 1, duration: 0.09, ease: "power1.out" }, at + 0.09);
+    }
+
+    // ================= 全片：颗粒、浮尘 =================
+    for (let t = 0; t < END; t += 1 / 8) tl.set("#grain", { backgroundPosition: `${Math.floor(rnd() * 512)}px ${Math.floor(rnd() * 512)}px` }, t);
+    const dust = $("#dust");
+    for (let i = 0; i < 60; i++) {
+      const s = 1 + rnd() * 2.6;
+      const m = mk(dust, "mote", null, { width: s + "px", height: s + "px", left: (rnd() * 1920) + "px", top: (rnd() * 1450) + "px", opacity: (0.12 + rnd() * 0.38).toFixed(2) });
+      if (s > 2.8) m.style.filter = "blur(1px)";
+      tl.fromTo(m, { x: 0, y: 0 }, { x: (rnd() - 0.45) * 240, y: -(160 + rnd() * 320), duration: END, ease: "none" }, 0);
+    }
+    // 书框金线：开场从中间向两边展开
+    tl.fromTo(["#plate1", "#plate2"], { clipPath: "inset(0 50% 0 50%)" }, { clipPath: "inset(0 0% 0 0%)", duration: 1.6, ease: "power2.inOut", stagger: 0.12 }, beat(0, 0));
+    tl.fromTo(".corner", { scale: 0 }, { scale: 1, duration: 0.5, ease: "back.out(2)", stagger: 0.06 }, beat(0, 0) + 1.2);
+
+    // ======================================================================
+    // 第 1 幕 · 考你一个问题（0 – 第 11 小节）
+    // ======================================================================
+    {
+      const sc = $("#sc1"), T1 = bar(11);
+      tl.fromTo(sc, { scale: 1 }, { scale: 1.02, duration: T1, ease: "none" }, 0);
+      labelTL(sc, 0, null, "2022 · 芝加哥大学 · 视觉记忆实验");
+      labelTR(sc, 0, null, "PSYCHOLOGICAL SCIENCE · MMXXII",
+        "“The Visual Mandela Effect as Evidence for Shared and Specific False Memories Across People”", beat(0, 2));
+
+      // 标本卡（正面：A/B 两个色块；背面：更正）
+      const stage = mk(sc, null, null); stage.id = "stage1";
+      mk(stage, null, null).id = "light1";
+      const card = mk(stage, null, null); card.id = "card";
+      mk(card, "face front",
+        `<div class="hd">SPECIMEN · No. I</div><div class="sub">尾巴尖 · 颜色比对</div>
+         <div class="sw swA"></div><div class="sw swB"></div>
+         <svg id="ring" viewBox="0 0 176 176"><circle id="ringc" cx="88" cy="88" r="84" fill="none" stroke="#8e2a22" stroke-width="2.5" stroke-dasharray="528" stroke-dashoffset="528" transform="rotate(-90 88 88)"/></svg>
+         <div class="lb lbA">A · 黑色</div><div class="lb lbB">B · 不是黑色</div>`);
+      mk(card, "face back",
+        `<div class="hd">CORRIGENDUM · 更正</div><div class="sub">尾巴尖 · 实际颜色</div>
+         <div class="sw swC"></div><div class="lb lbC">尾巴尖：不是黑色</div>`);
+      tl.fromTo(card, { y: 40, rotationX: 14, rotationY: -16 },
+        { y: 0, rotationX: 7, rotationY: -9, duration: 1.6, ease: "power3.out" }, beat(0, 1));
+      // 亮度渐变放在外层容器上：直接给 3D 卡片加滤镜会让背面失效（显示成镜像）
+      tl.fromTo(stage, { filter: "brightness(.2)" }, { filter: "brightness(1)", duration: 1.6, ease: "power3.out" }, beat(0, 1));
+      tl.fromTo("#light1", { opacity: 0 }, { opacity: 1, duration: 2, ease: "none" }, beat(0, 1));
+      tl.to(card, { rotationY: 9, rotationX: 4, duration: bar(8) - beat(0, 1) - 1.6, ease: "sine.inOut" }, beat(0, 1) + 1.6);
+      // 1-4：音乐变强的那一拍翻面
+      tl.to(card, { rotationY: 180, rotationX: 5, duration: 0.6, ease: "power3.inOut" }, bar(8));
+      tl.to(card, { rotationY: 188, rotationX: 3, duration: T1 - bar(8) - 0.6, ease: "sine.inOut" }, bar(8) + 0.6);
+
+      // 1-1 / 1-2：问题（第 1 秒内亮出）+ "……黑色？"
+      const q = text(sc, { t0: 0, t1: bar(8), kick: "考你一个问题", kickAt: beat(0, 0), main: "皮卡丘的尾巴尖，是什么颜色？", mainAt: beat(0, 1), mainDur: 0.32 });
+      const l2 = mk(q, "line2", `<span class="ch" id="d1">…</span><span class="ch" id="d2">…</span><span class="ch" id="blk">黑色</span><span class="ch" id="qm">？</span>`);
+      tl.fromTo("#d1", { opacity: 0 }, { opacity: 1, duration: 3 / FPS }, beat(3, 0));
+      tl.fromTo("#d2", { opacity: 0 }, { opacity: 1, duration: 3 / FPS }, beat(3, 1));
+      tl.fromTo("#blk", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 8 / FPS, ease: "power2.out" }, beat(3, 3));
+      tl.to("#ringc", { strokeDashoffset: 0, duration: 1.2, ease: "power2.inOut" }, beat(3, 3));
+      tl.fromTo("#qm", { opacity: 0, scale: 1.6 }, { opacity: 1, scale: 1, duration: 6 / FPS, ease: "power3.out" }, bar(4));
+
+      // 1-3：罗马数字倒计时 III → II → I，金色细圈一个小节画满
+      const cd = mk(sc, "cd");
+      ["III", "II", "I"].forEach((n, i) => {
+        const g = mk(cd, null, `<svg viewBox="0 0 180 180"><circle cx="90" cy="90" r="86" fill="none" stroke="rgba(198,162,101,.22)" stroke-width="1"/><circle class="arc" cx="90" cy="90" r="86" fill="none" stroke="#c6a265" stroke-width="2" stroke-dasharray="541" stroke-dashoffset="541" transform="rotate(-90 90 90)"/></svg><div class="num">${n}</div>`, { position: "absolute", inset: "0" });
+        tl.fromTo(g, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.01 }, bar(5 + i));
+        tl.fromTo(g.querySelector(".num"), { scale: 1.25 }, { scale: 1, duration: 0.4, ease: "power3.out" }, bar(5 + i));
+        tl.to(g.querySelector(".arc"), { strokeDashoffset: 0, duration: BAR - 0.05, ease: "none" }, bar(5 + i));
+        hideAt(g, bar(6 + i));
+      });
+      // 1-4：错。
+      text(sc, { t0: bar(8), t1: bar(9), main: "错。", xl: true, mainDur: 0.15 });
+      glow(bar(8)); shake(bar(8));
+      // 1-5
+      text(sc, { t0: bar(9), t1: null, main: "它的尾巴尖根本不是黑的" });
+    }
+
+    // ======================================================================
+    // 第 2 幕 · 记错的不止你（第 11 – 16 小节）
+    // ======================================================================
+    {
+      const sc = $("#sc2"), T0 = bar(11), T1 = bar(16);
+      sceneIn(sc, T0, T1);
+      labelTL(sc, T0, null, "2022 · 芝加哥大学 · 普拉萨德 & 贝恩布里奇");
+      labelTR(sc, T0, null, "UCHICAGO NEWS · MMXXII", "“…people tend to be very confident in picking this wrong image.”<br>— Wilma Bainbridge");
+      // 答题纸条一张张落下：先 3 张、再一拍一张、最后越落越快
+      const times = [T0 + 0.25, T0 + 0.6, T0 + 1.0];
+      for (let k = 0; k < 8; k++) times.push(beat(12, k));
+      for (let k = 0; k < 24; k++) times.push(bar(14) + k * (BAR / 24));
+      times.forEach((t, i) => {
+        const spread = Math.min(1, 0.35 + i / 40);
+        const x = 960 + (rnd() - 0.5) * 720 * spread, y = 420 + (rnd() - 0.5) * 260 * spread, r = (rnd() - 0.5) * 22;
+        const s = mk(sc, "slip", "A · 黑色", { left: x + "px", top: y + "px", zIndex: 16 + i });
+        tl.fromTo(s, { y: -70, rotation: r - 14, autoAlpha: 0 }, { y: 0, rotation: r, autoAlpha: 1, duration: 0.35, ease: "power2.out" }, t);
+      });
+      seal(sc, "确定", 1035, 300, 170, beat(15, 1));
+      text(sc, { t0: T0, t1: bar(12), main: "记错的，不止你一个" });
+      text(sc, { t0: bar(12), t1: bar(14), main: "2022 年，芝加哥大学做了测试" });
+      const b3 = text(sc, { t0: bar(14), t1: bar(15), main: "很多人都选了<span class='ul' id='ulBlack'>「黑尖」</span>" });
+      underline("#ulBlack", beat(14, 1));
+      text(sc, { t0: bar(15), t1: null, main: "而且特别确定" });
+    }
+
+    // ======================================================================
+    // 第 3 幕 · 它有个名字（第 16 – 26 小节）
+    // ======================================================================
+    {
+      const sc = $("#sc3"), T0 = bar(16), T1 = bar(26);
+      sceneIn(sc, T0, T1);
+      labelTL(sc, T0, bar(19), "2009 · DRAGON CON · 菲奥娜·布鲁姆");
+      labelTR(sc, T0, bar(19), "ENCYCLOPÆDIA BRITANNICA", "“…a vivid, yet incorrect, memory…”");
+      // 3-1
+      ornament(sc, T0, bar(17), 440);
+      text(sc, { t0: T0, t1: bar(17), main: "这种事，有个名字" });
+      // 3-2 扉页
+      const tw = mk(sc, "bigword", "The Mandela Effect", { top: "300px", fontSize: "132px" });
+      wipeIn(tw, bar(17), 1.0); hideAt(tw, bar(18));
+      const tl2 = ornament(sc, bar(17) + 0.4, bar(18), 500);
+      text(sc, { t0: bar(17), t1: bar(18), main: "叫<span class='g'>「曼德拉效应」</span>" });
+      // 3-3 罗马数字年份
+      const yr = mk(sc, "bigword", "MMIX", { top: "270px", fontSize: "210px", fontStyle: "normal", letterSpacing: "34px", color: "#c6a265" });
+      wipeIn(yr, bar(18), 0.9); hideAt(yr, bar(19));
+      text(sc, { t0: bar(18), t1: bar(19), main: "2009 年，一场科幻大会上" });
+
+      // 3-4 ~ 3-8：曼德拉
+      labelTL(sc, bar(19), bar(23), "1964—1982 · 罗本岛 · 纳尔逊·曼德拉");
+      labelTL(sc, bar(23), bar(24), "1990—1994 · 南非 · 纳尔逊·曼德拉");
+      labelTL(sc, bar(24), null, "2013 · 约翰内斯堡 · 纳尔逊·曼德拉");
+      labelTR(sc, bar(19), null, "ENCYCLOPÆDIA BRITANNICA", "“In my country we go to prison first<br>and then become President.”<br>— Nelson Mandela");
+      const cell = plate(sc, { t0: bar(19), t1: bar(23), src: "03-robben-island-cell.jpg", x: 1130, y: 214, w: 560, h: 690, pos: "50% 62%", cap: "Robben Island Prison, Cape Town · Plate III" });
+      text(sc, { t0: bar(19), t1: bar(22), layout: "left", kick: "很多人都「记得」——", main: "曼德拉 <span class='ul' id='ul80'>80 年代</span><br>就死在了狱中", mainAt: bar(20) });
+      underline("#ul80", bar(21));
+      tl.to(cell.shade, { opacity: 0.6, duration: 1.4, ease: "power1.inOut" }, bar(22));
+      text(sc, { t0: bar(22), t1: bar(23), layout: "left", main: "可事实是：" });
+      plate(sc, { t0: bar(23), t1: bar(24), src: "03-mandela-voting-1994.jpg", x: 1130, y: 214, w: 560, h: 690, pos: "50% 35%", cap: "Mandela voting, 1994 · Paul Weinberg" });
+      text(sc, { t0: bar(23), t1: bar(24), layout: "left", main: "他 1990 年出狱，<br>后来当了总统" });
+      plate(sc, { t0: bar(24), t1: T1, src: "03-mandela-1994.jpg", x: 1130, y: 214, w: 560, h: 690, pos: "50% 22%", s1: 1.09, cap: "Nelson Mandela, 1994 · Kingkongphoto & celebrity-photos.com" });
+      text(sc, { t0: bar(24), t1: null, layout: "left", main: "2013 年才去世，<br>享年 95 岁" });
+    }
+
+    // ======================================================================
+    // 第 4 幕 · 你可能也中过招（第 26 – 33 小节）
+    // ======================================================================
+    {
+      const sc = $("#sc4"), T0 = bar(26), T1 = bar(33);
+      sceneIn(sc, T0, T1);
+      labelTL(sc, T0, bar(31), "1980 · 《帝国反击战》 · 达斯·维达");
+      labelTR(sc, T0, bar(31), "THE EMPIRE STRIKES BACK · MCMLXXX", "“No. I am your father.”", bar(29) + BEAT);
+      // 金色细线胶片盘，缓慢转动
+      let holes = "";
+      for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; holes += `<circle cx="${200 + 112 * Math.cos(a)}" cy="${200 + 112 * Math.sin(a)}" r="44" fill="none" stroke="#c6a265" stroke-width="1.4"/>`; }
+      const reel = svg(sc, "", `<circle cx="200" cy="200" r="196" fill="none" stroke="#c6a265" stroke-width="1.6"/><circle cx="200" cy="200" r="184" fill="none" stroke="rgba(198,162,101,.4)" stroke-width="1"/>${holes}<circle cx="200" cy="200" r="30" fill="none" stroke="#c6a265" stroke-width="1.6"/><circle cx="200" cy="200" r="8" fill="#c6a265"/>`,
+        { left: "770px", top: "190px", width: "380px", height: "380px" }, "0 0 400 400");
+      wipeIn(reel, T0, 1.2);
+      tl.fromTo(reel, { rotation: 0 }, { rotation: 48, duration: bar(31) - T0, ease: "none" }, T0);
+      hideAt(reel, bar(31));
+      text(sc, { t0: T0, t1: bar(27), main: "达斯·维达那句名台词" });
+      const qb = text(sc, { t0: bar(27), t1: bar(29), main: "「<span class='strike' id='luke'>卢克，<i></i></span>我是你父亲」" });
+      const l2 = mk(qb, "line2", "电影里，没有「卢克」"); wipeIn(l2, bar(28), 0.35);
+      tl.to("#luke i", { scaleX: 1, duration: 0.5, ease: "power2.inOut" }, bar(28) + 0.1);
+      text(sc, { t0: bar(29), t1: bar(31), main: "他说的是：「<span class='ul' id='ulNo'>不，</span>我是你父亲」" });
+      underline("#ulNo", bar(29) + BEAT);
+      // 4-5 / 4-6：单片眼镜
+      labelTL(sc, bar(31), null, "2022 · 芝加哥大学 · 大富翁老头");
+      labelTR(sc, bar(31), null, "UCHICAGO NEWS · MMXXII", "“…has, in reality, never worn a monocle.”");
+      const mono = svg(sc, "", `<circle cx="150" cy="150" r="118" fill="none" stroke="#c6a265" stroke-width="2.2"/><circle cx="150" cy="150" r="104" fill="none" stroke="rgba(198,162,101,.45)" stroke-width="1"/><path d="M262 190 C 300 250, 260 300, 300 350 S 340 430, 310 470" fill="none" stroke="#c6a265" stroke-width="1.6" stroke-dasharray="6 6"/><path d="M110 95 Q 135 80 165 88" fill="none" stroke="rgba(236,228,212,.35)" stroke-width="3" stroke-linecap="round"/>`,
+        { left: "800px", top: "170px", width: "330px", height: "480px", transformOrigin: "45% 30%" }, "0 0 330 480");
+      wipeIn(mono, bar(31), 1.0);
+      tl.fromTo(mono, { rotation: -5 }, { rotation: 4, duration: T1 - bar(31), ease: "sine.inOut" }, bar(31));
+      const slash = mk(sc, "subject", null, { left: "770px", top: "320px", width: "400px", height: "5px", background: "#8e2a22", transformOrigin: "left center" });
+      tl.fromTo(slash, { scaleX: 0, rotation: -32 }, { scaleX: 1, rotation: -32, duration: 0.5, ease: "power2.inOut" }, bar(32) + 0.1);
+      text(sc, { t0: bar(31), t1: bar(32), main: "大富翁老头的单片眼镜？" });
+      text(sc, { t0: bar(32), t1: null, main: "他从来没戴过" });
+    }
+
+    // ======================================================================
+    // 第 5 幕 · 为什么会错得一样（第 33 – 42 小节）
+    // ======================================================================
+    {
+      const sc = $("#sc5"), T0 = bar(33), T1 = bar(42);
+      sceneIn(sc, T0, T1);
+      labelTL(sc, T0, bar(39), "1932 · 剑桥 · 弗雷德里克·巴特利特");
+      labelTR(sc, T0, bar(37), "REMEMBERING · MCMXXXII", "“Remembering is not the re-excitation of innumerable<br>fixed, lifeless and fragmentary traces.”<br>— F. C. Bartlett");
+      labelTR(sc, bar(37), bar(39), "REMEMBERING · MCMXXXII", "“It is an imaginative reconstruction, or construction…”<br>— F. C. Bartlett");
+      // 5-1
+      ornament(sc, T0, bar(34), 440);
+      text(sc, { t0: T0, t1: bar(34), main: "为什么大家会错得一模一样？" });
+      // 5-2
+      plate(sc, { t0: bar(34), t1: bar(35), src: "05-bartlett-1948.jpg", x: 1180, y: 214, w: 500, h: 650, pos: "50% 30%", cap: "Sir Frederic Bartlett, 1948 · Bassano Ltd" });
+      text(sc, { t0: bar(34), t1: bar(35), layout: "left", main: "1932 年，一位英国<br>心理学家发现" });
+      // 5-3 / 5-4：金色细线胶片，4 格
+      const strip = mk(sc, "subject", null, { left: "510px", top: "250px", width: "900px", height: "240px" });
+      strip.innerHTML = `<div style="position:absolute;inset:0;border-top:1px solid #c6a265;border-bottom:1px solid #c6a265"></div>` +
+        Array.from({ length: 18 }, (_, i) => `<div style="position:absolute;left:${14 + i * 50}px;top:10px;width:22px;height:14px;border:1px solid rgba(198,162,101,.6);border-radius:2px"></div><div style="position:absolute;left:${14 + i * 50}px;bottom:10px;width:22px;height:14px;border:1px solid rgba(198,162,101,.6);border-radius:2px"></div>`).join("");
+      const frames = ["I", "II", "III", "IV"].map((n, i) => mk(strip, null, n, { position: "absolute", left: (30 + i * 215) + "px", top: "40px", width: "195px", height: "160px", border: "1px solid #c6a265", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Palatino Linotype, serif", fontSize: "54px", color: "rgba(236,228,212,.7)", background: "rgba(198,162,101,.05)" }));
+      wipeIn(strip, bar(35), 1.0); hideAt(strip, bar(37));
+      const sline = mk(sc, "subject", null, { left: "480px", top: "368px", width: "960px", height: "5px", background: "#8e2a22", transformOrigin: "left center" });
+      tl.fromTo(sline, { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: "power2.inOut" }, beat(35, 1)); hideAt(sline, bar(36));
+      [2, 0, 3, 1].forEach((slot, i) => tl.to(frames[i], { x: (slot - i) * 215, y: (i % 2 ? -14 : 14), duration: BEAT * 1.6, ease: "power2.inOut" }, bar(36)));
+      frames.forEach((f, i) => tl.to(f, { y: 0, duration: BEAT, ease: "power2.out" }, bar(36) + BEAT * 2));
+      text(sc, { t0: bar(35), t1: bar(36), main: "记忆不是录像" });
+      text(sc, { t0: bar(36), t1: bar(37), main: "每次回想，都是重新拼一遍" });
+      // 5-5 / 5-6：拼图
+      plate(sc, { t0: bar(37), t1: bar(39), src: "05-jigsaw.jpg", x: 510, y: 180, w: 900, h: 470, pos: "50% 50%", cap: "Jigsaw puzzle in progress · Balise42" });
+      const br = svg(sc, "", `<rect x="0" y="0" width="220" height="180" fill="rgba(198,162,101,.10)"/><path d="M0 40 V0 H40 M180 0 H220 V40 M220 140 V180 H180 M40 180 H0 V140" fill="none" stroke="#e3c58f" stroke-width="5" style="filter:drop-shadow(0 0 6px rgba(0,0,0,.9))"/>`, { left: "1060px", top: "250px", width: "220px", height: "180px", zIndex: 18 }, "0 0 220 180");
+      wipeIn(br, bar(38), 0.6); hideAt(br, bar(39));
+      text(sc, { t0: bar(37), t1: bar(38), main: "就像拼图少了几块" });
+      text(sc, { t0: bar(38), t1: bar(39), main: "大脑会挑<span class='g'>「最眼熟」</span>的那块补上" });
+      // 5-7 ~ 5-9：Berenstain
+      labelTL(sc, bar(39), null, "1962 · 美国 · 斯坦 & 简·贝伦斯坦");
+      labelTR(sc, bar(39), null, "SNOPES · FACT CHECK", "“…the bears and their creators have always been<br>rendered as ‘Berenstain’ since the very beginning.”");
+      const bw = mk(sc, "bigword", "Beren<span id='stein'>st<span class='flip' id='bA'>a</span>in</span>", { top: "280px", fontSize: "176px" });
+      wipeIn(bw, bar(39), 1.0);
+      flipText("#bA", bar(40), "e");
+      tl.set("#bA", { color: "#b8483b" }, bar(40) + 0.09);
+      tl.to("#stein", { color: "#e3c58f", textShadow: "0 0 28px rgba(198,162,101,.75)", duration: 0.8, ease: "power2.out" }, bar(41));
+      text(sc, { t0: bar(39), t1: bar(40), main: "美国童书《贝贝熊》叫 Berenstain" });
+      text(sc, { t0: bar(40), t1: bar(41), main: "很多人却记成 Berenst<span class='r'>e</span>in" });
+      text(sc, { t0: bar(41), t1: null, main: "因为 <span class='g'>-stein</span> 这个结尾更常见" });
+    }
+
+    // ======================================================================
+    // 第 6 幕 · 记忆还能被别人改（第 42 – 54 小节）
+    // ======================================================================
+    {
+      const sc = $("#sc6"), T0 = bar(42), T1 = bar(54);
+      sceneIn(sc, T0, T1);
+      labelTL(sc, T0, bar(50), "1974 · 华盛顿大学 · 洛夫特斯 & 帕尔默");
+      labelTR(sc, T0, bar(50), "J. VERBAL LEARNING & VERBAL BEHAVIOR · MCMLXXIV", "“About how fast were the cars going<br>when they smashed into each other?”");
+      // 6-1
+      ornament(sc, T0, bar(43), 400);
+      text(sc, { t0: T0, t1: bar(43), main: "更吓人的是：<br>记忆还能被别人改" });
+      // 6-2
+      plate(sc, { t0: bar(43), t1: bar(44), src: "06-loftus.jpg", x: 1180, y: 214, w: 500, h: 650, pos: "50% 18%", cap: "Elizabeth Loftus, 2011 · BDEngler" });
+      text(sc, { t0: bar(43), t1: bar(44), layout: "left", main: "1974 年，<br>一个车祸实验" });
+      // 6-3 / 6-4：音乐重新变强的那一拍
+      plate(sc, { t0: bar(44), t1: bar(46), src: "06-crash-test.jpg", x: 510, y: 180, w: 900, h: 470, pos: "50% 55%", cap: "Frontal crash test · Calspan / NHTSA" });
+      glow(bar(44)); shake(bar(44));
+      text(sc, { t0: bar(44), t1: bar(45), main: "问「两车<span class='r'>撞碎</span>时开多快」" });
+      text(sc, { t0: bar(45), t1: bar(46), main: "比问「两车<span class='dim'>碰到</span>时」" });
+      // 6-5：数据图缓慢生长
+      const ch = mk(sc, "chart");
+      let grid = "";
+      [0, 10, 20, 30, 40, 50].forEach((v, i) => { const x = 230 + i * 194; grid += `<div class="grid" style="left:${x}px"></div><div class="tick" style="left:${x}px">${v}</div>`; });
+      ch.innerHTML = grid + `<div class="tick" style="left:1240px;bottom:-14px;transform:none;font-style:italic">mph</div><div class="axis"></div>
+        <div class="row" style="top:70px"><div class="rl" style="color:rgba(236,228,212,.75)">碰到</div><div class="bar" id="barA" style="width:617px;background:linear-gradient(90deg, rgba(198,162,101,.25), rgba(198,162,101,.75));"></div><div class="val" id="valA" style="left:870px;color:#c6a265"><span id="numA">0.0</span><span class="unit">英里/时</span></div></div>
+        <div class="row" style="top:200px"><div class="rl" style="color:#e3c58f">撞碎</div><div class="bar" id="barB" style="width:792px;background:linear-gradient(90deg, rgba(142,42,34,.35), rgba(142,42,34,.95));"></div><div class="val" id="valB" style="left:1045px;color:#e8d3ad"><span id="numB">0.0</span><span class="unit">英里/时</span></div></div>`;
+      wipeIn(ch, bar(46), 0.8); hideAt(ch, bar(48));
+      tl.fromTo("#barA", { scaleX: 0 }, { scaleX: 1, duration: 1.2, ease: "power3.out" }, beat(46, 1));
+      tl.fromTo("#valA", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2 }, beat(46, 1));
+      countUp($("#numA"), 0, 31.8, beat(46, 1), 1.2, 1);
+      tl.fromTo("#barB", { scaleX: 0 }, { scaleX: 1, duration: 1.2, ease: "power3.out" }, bar(47));
+      tl.fromTo("#valB", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2 }, bar(47));
+      countUp($("#numB"), 0, 40.8, bar(47), 1.2, 1);
+      text(sc, { t0: bar(46), t1: bar(48), kick: "同一段车祸视频，只换了一个词", main: "大家估的车速快了近 <span class='ul' id='ul9'>9 英里/时</span>" });
+      underline("#ul9", beat(47, 2));
+      // 6-6 / 6-7：碎玻璃
+      plate(sc, { t0: bar(48), t1: bar(50), src: "06-crash-test.jpg", x: 510, y: 180, w: 900, h: 470, pos: "50% 55%", s0: 1.06, s1: 1.1 });
+      let cracks = "";
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2 + rnd() * 0.4; let x = 450, y = 230, d = `M${x} ${y}`;
+        for (let k = 0; k < 5; k++) { x += Math.cos(a + (rnd() - 0.5) * 0.6) * (40 + rnd() * 60); y += Math.sin(a + (rnd() - 0.5) * 0.6) * (30 + rnd() * 45); d += ` L${x.toFixed(1)} ${y.toFixed(1)}`; }
+        cracks += `<path class="ck" d="${d}" fill="none" stroke="rgba(250,242,225,.95)" stroke-width="2.2" stroke-dasharray="500" stroke-dashoffset="500" style="filter:drop-shadow(0 0 2px rgba(0,0,0,.8))"/>`;
+      }
+      const ck = svg(sc, "", cracks, { left: "534px", top: "204px", width: "852px", height: "422px", zIndex: 17, overflow: "hidden" }, "24 24 852 422");
+      tl.to(ck.querySelectorAll(".ck"), { strokeDashoffset: 0, duration: 6 / FPS, ease: "power1.out", stagger: 0.01 }, bar(48) + 0.1);
+      hideAt(ck, bar(49));
+      const xx = svg(sc, "", `<path class="x1" d="M330 130 L570 340" stroke="#8e2a22" stroke-width="5" stroke-dasharray="330" stroke-dashoffset="330"/><path class="x2" d="M570 130 L330 340" stroke="#8e2a22" stroke-width="5" stroke-dasharray="330" stroke-dashoffset="330"/>`, { left: "510px", top: "180px", width: "900px", height: "470px", zIndex: 17 }, "0 0 900 470");
+      tl.to(xx.querySelector(".x1"), { strokeDashoffset: 0, duration: 0.3, ease: "power2.inOut" }, beat(49, 1));
+      tl.to(xx.querySelector(".x2"), { strokeDashoffset: 0, duration: 0.3, ease: "power2.inOut" }, beat(49, 1) + 0.25);
+      hideAt(xx, bar(50));
+      text(sc, { t0: bar(48), t1: bar(49), main: "还有人「看到了」碎玻璃" });
+      text(sc, { t0: bar(49), t1: bar(50), main: "视频里，根本没有碎玻璃" });
+      // 6-8 ~ 6-10：商场
+      labelTL(sc, bar(50), null, "1995 · 商场走丢实验 · 洛夫特斯 & 皮克雷尔");
+      labelTR(sc, bar(50), null, "SCIENTIFIC AMERICAN", "“…they had been lost in a shopping mall<br>and then found by an older woman.”");
+      const mall = plate(sc, { t0: bar(50), t1: bar(53), src: "06-mall.jpg", x: 510, y: 180, w: 900, h: 470, pos: "50% 50%", cap: "Shopping mall interior, Melbourne · Donaldytong" });
+      for (let k = 0; k < 4; k++) {
+        tl.to(mall.img, { filter: "sepia(.55) saturate(.55) brightness(.62) contrast(1.08) blur(7px)", duration: BEAT * 0.45, ease: "sine.inOut" }, beat(51, k));
+        tl.to(mall.img, { filter: "sepia(.55) saturate(.55) brightness(.68) contrast(1.08) blur(0px)", duration: BEAT * 0.45, ease: "sine.inOut" }, beat(51, k) + BEAT * 0.5);
+      }
+      seal(sc, "虚构", 1250, 200, 170, beat(52, 1), false, bar(53));
+      text(sc, { t0: bar(50), t1: bar(51), main: "1995 年，研究者告诉一群人：" });
+      text(sc, { t0: bar(51), t1: bar(52), main: "「你小时候在商场走丢过」" });
+      text(sc, { t0: bar(52), t1: bar(53), main: "这件事是编的" });
+      // 6-11：古罐与石子（3 白 1 暗红）
+      const urn = svg(sc, "", `<path d="M150 40 h100 M160 40 c0 30 -10 40 -30 60 c-60 50 -90 120 -70 200 c20 80 80 110 140 110 c60 0 120 -30 140 -110 c20 -80 -10 -150 -70 -200 c-20 -20 -30 -30 -30 -60" fill="none" stroke="#c6a265" stroke-width="2"/><path d="M95 160 C 60 130 40 170 70 200 M305 160 C 340 130 360 170 330 200" fill="none" stroke="#c6a265" stroke-width="1.6"/><path d="M90 300 Q 200 330 310 300" fill="none" stroke="rgba(198,162,101,.4)" stroke-width="1"/>`,
+        { left: "760px", top: "170px", width: "400px", height: "460px" }, "0 0 400 460");
+      wipeIn(urn, bar(53), 0.6);
+      [[150, "#ddd2bc"], [205, "#e6dcc8"], [255, "#d6cab2"], [205, "#8e2a22"]].forEach(([x, c], k) => {
+        const st = mk(sc, "subject", null, { left: (760 + x - 26) + "px", top: (170 + (k === 3 ? 330 : 370)) + "px", width: "52px", height: "36px", borderRadius: "50%", background: c, boxShadow: "inset -4px -5px 8px rgba(0,0,0,.35)", zIndex: 16 });
+        tl.fromTo(st, { y: -330, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.42, ease: "bounce.out" }, beat(53, k));
+      });
+      text(sc, { t0: bar(53), t1: null, main: "约四分之一的人「想起来了」" });
+    }
+
+    // ======================================================================
+    // 第 7 幕 · 反转（第 54 – 63 小节）
+    // ======================================================================
+    {
+      const sc = $("#sc7"), T0 = bar(54), T1 = bar(63);
+      sceneIn(sc, T0, T1);
+      labelTL(sc, T0, bar(57), "2023 · CNN · 尼尔·达格诺尔");
+      labelTR(sc, T0, bar(57), "CNN · MMXXIII", "“…people are often remembering things the way they think<br>they should be rather than they actually are.”");
+      plate(sc, { t0: T0, t1: bar(56), src: "07-hubble-deep-field.jpg", x: 700, y: 150, w: 520, h: 520, pos: "50% 50%", s0: 1.18, s1: 1.3, rot: 7, cap: "Hubble Ultra Deep Field · NASA / ESA" });
+      seal(sc, "无证据", 1130, 170, 180, beat(55, 1), false, bar(56));
+      text(sc, { t0: T0, t1: bar(55), main: "那会不会是平行宇宙？" });
+      text(sc, { t0: bar(55), t1: bar(56), main: "研究者说：没有证据" });
+      // 7-3
+      const b73 = mk(sc, "tb bottom"); const m73 = mk(b73, "main", "<span id='t73'></span><span id='dash' style='opacity:0'>——</span>");
+      typewriter($("#t73"), "最妙的是", bar(56), 4 / FPS);
+      tl.set("#dash", { opacity: 1 }, beat(56, 3)); hideAt(b73, bar(57));
+      // 7-4 ~ 7-8
+      labelTL(sc, bar(57), null, "2009 / 2010 · DRAGON CON · 菲奥娜·布鲁姆");
+      labelTR(sc, bar(57), null, "MERRIAM-WEBSTER", "“…at a Dragon Con convention in 2009 (or 2010?)”");
+      const cL = mk(sc, "icard", "<div class='k'>SOURCE · A</div><div class='y'>2009</div>", { left: "560px", top: "240px" });
+      const cR = mk(sc, "icard", "<div class='k'>SOURCE · B</div><div class='y'>2010</div>", { left: "1000px", top: "240px" });
+      [cL, cR].forEach((c, i) => { tl.fromTo(c, { y: 50, autoAlpha: 0, rotation: i ? 3 : -3 }, { y: 0, autoAlpha: 1, rotation: i ? 2 : -2, duration: 0.9, ease: "power3.out" }, bar(57) + i * 0.15); hideAt(c, bar(62)); });
+      const yL = cL.querySelector(".y"), yR = cR.querySelector(".y");
+      for (let k = 0; k < 8; k++) { const t = bar(59) + k * BEAT; flipText(yL, t, k % 2 ? "2009" : "2010"); flipText(yR, t, k % 2 ? "2010" : "2009"); }
+      tl.to([cL, cR], { opacity: 0.32, duration: 0.6, ease: "power1.inOut" }, bar(61));
+      const cM = mk(sc, "icard", "<div class='k'>FIONA BROOME</div><div class='y'>20<span class='flip' id='yy'>09</span></div>", { left: "780px", top: "240px" });
+      tl.fromTo(cM, { y: 40, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.7, ease: "power3.out" }, bar(62));
+      for (let k = 1; k < 4; k++) flipText("#yy", beat(62, k), k % 2 ? "10" : "09");
+      text(sc, { t0: bar(57), t1: bar(58), main: "「曼德拉效应」是哪年起的名" });
+      text(sc, { t0: bar(58), t1: bar(59), main: "资料也记得不一样" });
+      text(sc, { t0: bar(59), t1: bar(61), main: "有的写 2009，有的写 2010" });
+      const b77 = mk(sc, "tb bottom"); const m77 = mk(b77, "main"); typewriter(m77, "连起名的人自己都说：", bar(61), 3 / FPS); hideAt(b77, bar(62));
+      text(sc, { t0: bar(62), t1: null, main: "「2009 或 2010 吧」" });
+    }
+
+    // ======================================================================
+    // 第 8 幕 · 落到你身上（第 63 小节 – 结尾）
+    // ======================================================================
+    {
+      const sc = $("#sc8"), T0 = bar(63), T1 = END;
+      sceneIn(sc, T0, T1);
+      labelTL(sc, T0, null, "2026 · 此时此地 · 你");
+      labelTR(sc, T0, null, "REMEMBERING · MCMXXXII", "“…an imaginative reconstruction, or construction…”<br>— F. C. Bartlett");
+      plate(sc, { t0: T0, t1: bar(67), src: "08-library.jpg", x: 520, y: 170, w: 880, h: 480, pos: "50% 55%", cap: "Library of Congress, Main Reading Room · Carol M. Highsmith" });
+      const gs = seal(sc, "已核实", 1300, 520, 130, beat(66, 1), true, bar(67));
+      text(sc, { t0: T0, t1: bar(64), main: "所以，下次你特别确定的时候" });
+      text(sc, { t0: bar(64), t1: bar(65), main: "先别急着跟人争" });
+      text(sc, { t0: bar(65), t1: bar(66), main: "越确定，越该去查一查" });
+      text(sc, { t0: bar(66), t1: bar(67), main: "重要的事，看原始出处" });
+      // 8-5：书的末页
+      const fin = mk(sc, "bigword", "— FINIS —", { top: "360px", fontSize: "44px", fontStyle: "normal", letterSpacing: "22px", color: "#c6a265" });
+      wipeIn(fin, bar(67), 1.2);
+      ornament(sc, bar(67) + 0.3, null, 450);
+      text(sc, { t0: bar(67), t1: null, main: "你还记错过什么？评论区说说", mainAt: bar(67) + BEAT });
+      const foot = mk(sc, "platecap", "图片出处见简介 · 内容由 AI 生成", { left: "160px", top: "952px", fontStyle: "normal", fontFamily: "Noto Serif SC, serif", fontSize: "20px", letterSpacing: "4px" });
+      wipeIn(foot, bar(67) + BEAT * 3, 1.0);
+      tl.fromTo("#fadeout", { opacity: 0 }, { opacity: 1, duration: 15 / FPS, ease: "power1.in" }, END - 15 / FPS);
+    }
+
+    window.__timelines = window.__timelines || {};
+    window.__timelines.main = tl;
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>封面 · 暗黑剪影随笔</title>
+<!--
+暗黑剪影随笔 · 封面模板。和视频同一套风格：纯黑底，左边大标题，右边一个剪影人物 + 发光象征物。
+只改下面脚本里的 CFG（标了）。两种尺寸用同一个文件：
+横版 16:9（B站/西瓜/视频号横屏）：不带参数，窗口 1920x1080
+竖版 3:4 （抖音/小红书封面）： 地址后加?r=34，窗口 1080x1440
+截图命令见 SKILL.md 第 5 步。放在 video/ 下，和 index.html 共用./assets/。
+-->
+<style>
+@font-face { font-family: "Noto Serif SC"; src: url("./assets/fonts/NotoSerifSC-VF.ttf") format("truetype"), local("Noto Serif SC"), local("SimSun"); font-weight: 200 900;}
+:root { --ink: #f2f2f2; --dim: rgba(242,242,242,.55); --gold: #ffd27a; --cold: #a9dcff; --rust: #c14a2e; --mono: "Cascadia Mono", Consolas, "Courier New", monospace;}
+html, body { margin: 0; background: #000;}
+#root { position: relative; overflow: hidden; color: var(--ink); background: #000; font-family: "Noto Serif SC", "SimSun", serif;}
+canvas { position: absolute; inset: 0;}
+#txt { position: absolute; z-index: 5; display: flex; flex-direction: column;}
+.kick { font-family: var(--mono); color: rgba(255,210,122,.8); letter-spacing: 4px; white-space: nowrap;}
+.title { font-weight: 900; line-height: 1.16; letter-spacing: 4px; white-space: nowrap;
+text-shadow: 0 0 28px rgba(255,255,255,.25), 0 0 3px rgba(255,255,255,.55), 0 4px 18px rgba(0,0,0,.9);}
+.sub { font-weight: 700; color: rgba(242,242,242,.86); letter-spacing: 2px; white-space: nowrap; text-shadow: 0 2px 14px rgba(0,0,0,.9);}
+.en { font-family: Georgia, serif; letter-spacing: 6px; color: var(--dim); white-space: nowrap;}
+.g { color: var(--gold); text-shadow: 0 0 30px rgba(255,210,122,.7), 0 4px 18px rgba(0,0,0,.9);}
+.c { color: var(--cold); text-shadow: 0 0 30px rgba(169,220,255,.7), 0 4px 18px rgba(0,0,0,.9);}
+.r { color: #e0684a; text-shadow: 0 0 30px rgba(224,104,74,.65), 0 4px 18px rgba(0,0,0,.9);}
+#vignette { position: absolute; inset: 0; z-index: 8; background: radial-gradient(100% 90% at 50% 45%, transparent 60%, rgba(0,0,0,.55) 100%); pointer-events: none;}
+#grain { position: absolute; inset: 0; z-index: 9; background: url("./assets/grain.png") repeat; background-size: 512px 512px; mix-blend-mode: soft-light; opacity:.16; pointer-events: none;}
+</style>
+</head>
+<body>
+<div id="root">
+<canvas id="fx"></canvas>
+<div id="txt"></div>
+<div id="vignette"></div>
+<div id="grain"></div>
+</div>
+<script>
+(function () {
+// 封面内容。标题 = 片名卡那一句（或投稿推荐标题的前半句），两行，每行不超过 6 个字。
+// [g]…[/g] 鎏金、[c]…[/c] 冷蓝、[r]…[/r] 赭红，全封面最多点亮 1 个词。
+// symbol: 主题的象征物 —— "bridge" 桥 | "pendulum" 钟摆 | "threads" 提线 | "track" 跑道
+const CFG = {
+kicker: "暗黑剪影 · 权力意志", // 左上小字：系列名 · 主题（参加大赛就写 "VIBE 知识大赏 · 主题"）
+title: ["跑到一半，", "想[g]停下[/g]？"], // 大标题，两行
+sub: "尼采：生命要的不是保全", // 一句钩子，不超过 12 个字，接着标题往下读要通
+en: "WILLE ZUR MACHT", // 英文小标，全大写
+symbol: "bridge", // 象征物
+accent: "#ffd27a", // 象征物发光色（按风格里的颜色含义选）
+figure: "run", // 剪影姿态：run | bend | sit | stand（false = 不要人物）
+seed: 20261014
+};
+
+const tall = new URLSearchParams(location.search).get("r") === "34";
+const W = tall? 1080: 1920, H = tall? 1440: 1080;
+const root = document.getElementById("root");
+root.style.width = W + "px"; root.style.height = H + "px";
+const cv = document.getElementById("fx"); cv.width = W; cv.height = H;
+const ctx = cv.getContext("2d");
+const mkRnd = (s) => () => { s |= 0; s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296;};
+const rnd = mkRnd(CFG.seed);
+const hl = (s) => s.replace(/\[(g|c|r)\](.*?)\[\/\1\]/g, '<span class="$1">$2</span>');
+
+// ---------- 排版：横版字在左、象征物在右；竖版象征物在上、字在下 ----------
+const L = tall
+? { gx: 540, gy: 470, box: { left: "0", right: "0", top: "880px", alignItems: "center", textAlign: "center"}, kick: 26, title: 112, sub: 44, en: 18}
+: { gx: 1390, gy: 540, box: { left: "140px", top: "0", bottom: "0", justifyContent: "center"}, kick: 26, title: 134, sub: 48, en: 18};
+const txt = document.getElementById("txt");
+Object.assign(txt.style, L.box);
+txt.innerHTML =
+`<div class="kick" style="font-size:${L.kick}px;margin-bottom:${tall? 26: 34}px">${CFG.kicker}</div>` +
+`<div class="title" style="font-size:${L.title}px">${CFG.title.map(hl).join("<br>")}</div>` +
+`<div class="sub" style="font-size:${L.sub}px;margin-top:${tall? 30: 40}px">${hl(CFG.sub)}</div>` +
+`<div class="en" style="font-size:${L.en}px;margin-top:22px">${CFG.en}</div>`;
+
+// ---------- 剪影人物（简化版：跑/弯腰/坐/站） ----------
+function figure(x, y, s, pose, col) {
+const u = s / 100;
+ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 7 * u; ctx.lineCap = "round";
+const shY = y - 72 * u, hipY = y - 42 * u;
+ctx.beginPath(); ctx.arc(x, y - 86 * u, 9 * u, 0, 6.283); ctx.fill();
+const limb = (x1, y1, x2, y2) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();};
+if (pose === "run") {
+limb(x, shY, x - 12 * u, hipY);
+limb(x - 12 * u, hipY, x + 8 * u, y); limb(x - 12 * u, hipY, x - 30 * u, y - 10 * u);
+limb(x - 12 * u, shY, x + 6 * u, shY + 20 * u); limb(x - 12 * u, shY, x - 28 * u, shY + 20 * u);
+} else if (pose === "bend") {
+limb(x, y - 38 * u, x + 12 * u, y - 62 * u);
+limb(x + 12 * u, y - 62 * u, x + 20 * u, y - 28 * u); limb(x, y - 38 * u, x - 10 * u, y); limb(x, y - 38 * u, x + 8 * u, y);
+} else if (pose === "sit") {
+limb(x, y - 30 * u, x, y - 58 * u); limb(x, y - 30 * u, x + 28 * u, y - 30 * u);
+limb(x + 28 * u, y - 30 * u, x + 28 * u, y); limb(x, y - 58 * u, x - 8 * u, y - 2 * u);
+} else {
+limb(x, shY, x, hipY); limb(x, hipY, x - 8 * u, y); limb(x, hipY, x + 8 * u, y);
+limb(x, shY, x - 10 * u, shY + 27 * u); limb(x, shY, x + 10 * u, shY + 27 * u);
+}
+}
+function glowDot(x, y, r, col, a) {
+const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+g.addColorStop(0, col); g.addColorStop(1, "rgba(0,0,0,0)");
+ctx.globalAlpha = a; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
+}
+function draw() {
+ctx.clearRect(0, 0, W, H);
+const gx = L.gx, gy = L.gy, A = CFG.accent, R = tall? 0.62: 1;
+ctx.globalCompositeOperation = "lighter";
+// 背景星尘
+for (let i = 0; i < 260; i++) {
+ctx.globalAlpha =.06 + rnd() *.14; ctx.fillStyle = "#dfe6f2";
+ctx.fillRect(rnd() * W, rnd() * H, 1 + rnd() * 1.6, 1 + rnd() * 1.6);
+}
+ctx.globalAlpha = 1;
+// 象征物
+ctx.strokeStyle = A; ctx.lineCap = "round";
+if (CFG.symbol === "bridge") {
+const x1 = gx - 330 * R, x2 = gx + 330 * R, yB = gy + 130 * R, sag = 200 * R;
+glowDot(gx, yB - sag, 260 * R, A,.14);
+ctx.lineWidth = 5; ctx.beginPath();
+for (let i = 0; i <= 40; i++) { const q = i / 40, x = x1 + (x2 - x1) * q, y = yB - Math.sin(q * Math.PI) * sag; i? ctx.lineTo(x, y): ctx.moveTo(x, y);}
+ctx.stroke();
+ctx.globalAlpha =.5; ctx.lineWidth = 2;
+for (let i = 1; i < 5; i++) { const q = i / 5, x = x1 + (x2 - x1) * q; ctx.beginPath(); ctx.moveTo(x, yB - Math.sin(q * Math.PI) * sag); ctx.lineTo(x, yB + 50 * R); ctx.stroke();}
+ctx.globalAlpha = 1;
+if (CFG.figure) { figure(gx - 120 * R, yB - Math.sin(0.36 * Math.PI) * sag + 6, 120 * R, CFG.figure, "#e8e8e8");}
+} else if (CFG.symbol === "pendulum") {
+const len = 420 * R;
+glowDot(gx, gy + len *.8, 200 * R, A,.2);
+ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(gx, gy - 160 * R); ctx.lineTo(gx + 120 * R, gy - 160 * R + len); ctx.stroke();
+ctx.fillStyle = "#0c0c0e"; ctx.beginPath(); ctx.arc(gx + 120 * R, gy - 160 * R + len, 34 * R, 0, 6.283); ctx.fill();
+ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(gx + 120 * R, gy - 160 * R + len, 34 * R, 0, 6.283); ctx.stroke();
+glowDot(gx + 120 * R, gy - 160 * R + len, 60 * R, "#ffffff",.5);
+} else if (CFG.symbol === "threads") {
+for (let i = 0; i < 9; i++) {
+const x = gx - 280 * R + i * 70 * R, sway = (rnd() -.5) * 40 * R, hy = gy + 40 * R;
+ctx.globalAlpha =.5; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + sway, hy); ctx.stroke();
+ctx.globalAlpha = 1; figure(x + sway, hy + 110 * R, 110 * R, "stand", "#e8e8e8");
+}
+ctx.globalAlpha = 1;
+} else { // track 跑道
+const yH = gy - 60 * R;
+ctx.fillStyle = "rgba(193,74,46,.14)";
+ctx.beginPath(); ctx.moveTo(gx - 60, yH); ctx.lineTo(gx + 60, yH); ctx.lineTo(W, H); ctx.lineTo(gx - 800 * R, H); ctx.closePath(); ctx.fill();
+ctx.lineWidth = 2;
+for (let i = -4; i <= 4; i++) { ctx.globalAlpha =.8; ctx.beginPath(); ctx.moveTo(gx + i * 14, yH); ctx.lineTo(gx + i * 200 * R, H); ctx.stroke();}
+ctx.globalAlpha = 1;
+glowDot(gx, yH, 160 * R, A,.25);
+if (CFG.figure) figure(gx, H - 260 * R, 170 * R, CFG.figure, "#e8e8e8");
+}
+ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+document.title = "ready";
+}
+(document.fonts && document.fonts.ready? document.fonts.load(`900 100px "Noto Serif SC"`).catch(() => {}).then(() => document.fonts.ready): Promise.resolve()).then(draw);
+})();
+</script>
+</body>
+</html>

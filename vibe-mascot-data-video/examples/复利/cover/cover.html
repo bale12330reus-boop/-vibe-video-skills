@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>cover</title>
+<script>
+/* ===== 【改】每期只改这里 ===== */
+window.COVER = {
+  series: "萌物算账",
+  no: "01",
+  kick: "1 万块，每天只长 <span class='g'>1%</span>",
+  title: "一年后<span class='r'>＝？</span>",
+  big: "37.8万",            // 留空 "" 就不剧透
+  bigNote: "不是 <s>4.65 万</s>",   // <s>…</s> 里的字会被红线划掉
+  en: "YOUR ¥10,000 · +1% A DAY · 365 DAYS LATER",
+  mascot: "gold"            // gold = 发光实心金砖；line = 空心线稿
+};
+/* ===== 改到这里为止 ===== */
+</script>
+<style>
+:root{--bg:#070707;--ivory:#F3EBD8;--gold:#F5C24A;--red:#E8352E;--dim:#8C8578}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;background:var(--bg);overflow:hidden}
+body{font-family:"Noto Sans SC","Source Han Sans SC","Microsoft YaHei UI","Microsoft YaHei","PingFang SC",sans-serif;color:var(--ivory);font-weight:900}
+#stage{position:absolute;inset:0;background:radial-gradient(ellipse at var(--gx) 50%,#221909 0%,#0c0a07 40%,#050505 100%)}
+canvas{position:absolute;inset:0;width:100%;height:100%}
+.g{color:var(--gold)} .r{color:var(--red)}
+#tag{position:absolute;left:calc(var(--u)*5);top:calc(var(--u)*5);display:flex;align-items:center;gap:calc(var(--u)*1.6);font-size:calc(var(--u)*3.2);letter-spacing:.12em;color:var(--ivory)}
+#tag i{display:block;width:calc(var(--u)*5);height:calc(var(--u)*.45);background:var(--gold)}
+#tag b{color:var(--gold);font-weight:900}
+#no{position:absolute;right:calc(var(--u)*5);top:calc(var(--u)*4.4);font-size:calc(var(--u)*3.2);color:var(--dim);letter-spacing:.1em;font-family:"Segoe UI","Microsoft YaHei",sans-serif;font-weight:700}
+#text{position:absolute;display:flex;flex-direction:column}
+#kick{font-size:calc(var(--u)*5.2);color:var(--ivory);opacity:.92;font-weight:700}
+#title{font-size:calc(var(--u)*14);line-height:1.08;letter-spacing:.02em;margin-top:calc(var(--u)*1.6);white-space:nowrap}
+#bigwrap{display:flex;align-items:baseline;gap:calc(var(--u)*2.4);margin-top:calc(var(--u)*2.6)}
+#big{font-size:calc(var(--u)*11);color:var(--gold);text-shadow:0 0 calc(var(--u)*3) rgba(245,194,74,.55);font-family:"Segoe UI","Microsoft YaHei",sans-serif;font-weight:900}
+#bigNote{font-size:calc(var(--u)*4.2);color:var(--dim);font-weight:700}
+#bigNote s{text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:calc(var(--u)*.5)}
+#en{font-size:calc(var(--u)*2.3);color:var(--dim);letter-spacing:.22em;margin-top:calc(var(--u)*3);font-family:"Segoe UI",sans-serif;font-weight:600}
+#mascot{position:absolute;overflow:visible}
+#halo{position:absolute;border-radius:50%;border:calc(var(--u)*.5) solid rgba(245,194,74,.85);box-shadow:0 0 calc(var(--u)*4) rgba(245,194,74,.6),inset 0 0 calc(var(--u)*4) rgba(245,194,74,.35)}
+#ground{position:absolute;height:1px;background:linear-gradient(90deg,transparent,rgba(243,235,216,.5),transparent)}
+/* 横版：左文右图 */
+.h #text{left:calc(var(--u)*7);top:50%;transform:translateY(-46%);max-width:58%}
+.h #mascot{right:calc(var(--W)*.07);top:50%;width:calc(var(--W)*.34);transform:translateY(-50%)}
+.h #halo{width:calc(var(--W)*.40);height:calc(var(--W)*.40);right:calc(var(--W)*.04);top:50%;transform:translateY(-50%)}
+.h #ground{left:0;right:0;top:calc(50% + var(--W)*.105)}
+/* 竖版：上图下文，文字整体在画面中上部（避开抖音底部 20%） */
+.v #mascot{left:50%;top:var(--mt);width:calc(var(--W)*.56);transform:translateX(-50%)}
+.v #halo{width:var(--halo);height:var(--halo);left:50%;top:var(--hy);transform:translateX(-50%)}
+.v #ground{left:0;right:0;top:calc(var(--mt) + var(--W)*.39)}
+.v #text{left:0;right:0;top:var(--tt);align-items:center;text-align:center}
+.v #bigwrap{justify-content:center}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="dust"></canvas>
+  <div id="ground"></div>
+  <div id="halo"></div>
+  <svg id="mascot" viewBox="0 0 200 140" aria-hidden="true">
+    <defs>
+      <linearGradient id="gg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#FFE9A0"/><stop offset=".55" stop-color="#F5C24A"/><stop offset="1" stop-color="#C98A1A"/>
+      </linearGradient>
+      <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+        <feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <g id="bar" stroke-linejoin="round" stroke-linecap="round">
+      <path id="body" d="M38 44 L162 44 L184 118 Q187 130 174 130 L26 130 Q13 130 16 118 Z" stroke-width="7"/>
+      <path id="lid" d="M38 44 L54 18 Q56 14 61 14 L139 14 Q144 14 146 18 L162 44" stroke-width="7" fill="none"/>
+      <path id="shine" d="M46 60 L42 74 M54 58 L51 68" stroke-width="5" fill="none"/>
+      <ellipse class="blush" cx="64" cy="100" rx="9" ry="5"/>
+      <ellipse class="blush" cx="136" cy="100" rx="9" ry="5"/>
+      <circle class="eye" cx="84" cy="86" r="9"/><circle class="eye" cx="116" cy="86" r="9"/>
+      <circle class="hl" cx="87" cy="83" r="3"/><circle class="hl" cx="119" cy="83" r="3"/>
+      <path id="mouth" d="M94 101 Q100 107 106 101" stroke-width="4.5" fill="none"/>
+    </g>
+  </svg>
+  <div id="tag"><i></i><span><b id="series"></b></span></div>
+  <div id="no"></div>
+  <div id="text">
+    <div id="kick"></div>
+    <div id="title"></div>
+    <div id="bigwrap"><div id="big"></div><div id="bigNote"></div></div>
+    <div id="en"></div>
+  </div>
+</div>
+<script>
+(function(){
+  var C = window.COVER;
+  var r = (new URLSearchParams(location.search).get("r")) || "16x9";
+  var size = {"16x9":[1920,1080],"4x3":[1440,1080],"3x4":[1080,1440],"9x16":[1080,1920]}[r] || [1920,1080];
+  var W = size[0], H = size[1], vertical = H > W;
+  var root = document.documentElement.style;
+  document.body.style.width = W + "px"; document.body.style.height = H + "px";
+  root.setProperty("--W", W + "px");
+  root.setProperty("--u", (Math.min(W, H) / 100) + "px");
+  root.setProperty("--gx", vertical ? "50%" : "74%");
+  // 竖版：萌物和文字的纵向位置（9:16 更高，留出底部 20%）
+  var mt = r === "9x16" ? H * 0.17 : H * 0.12;      // 萌物顶部
+  var mh = W * 0.56 * 0.7;                          // 萌物高度（viewBox 200×140）
+  var halo = W * 0.62, cy = mt + mh / 2;            // 光环以萌物为中心
+  root.setProperty("--mt", mt + "px");
+  root.setProperty("--halo", halo + "px");
+  root.setProperty("--hy", (cy - halo / 2) + "px");
+  root.setProperty("--tt", (cy + halo / 2 + H * 0.025) + "px");   // 文字在光环下方
+  document.getElementById("stage").className = vertical ? "v" : "h";
+
+  document.getElementById("series").textContent = C.series;
+  document.getElementById("no").textContent = "No." + C.no;
+  document.getElementById("kick").innerHTML = C.kick;
+  document.getElementById("title").innerHTML = C.title;
+  document.getElementById("en").textContent = C.en;
+  if (C.big) {
+    document.getElementById("big").textContent = C.big;
+    document.getElementById("bigNote").innerHTML = C.bigNote || "";
+  } else {
+    document.getElementById("bigwrap").style.display = "none";
+  }
+
+  // 萌物配色
+  var gold = C.mascot !== "line", ivory = "#F3EBD8";
+  var body = document.getElementById("body");
+  body.setAttribute("fill", gold ? "url(#gg)" : "#0d0c0a");
+  body.setAttribute("stroke", gold ? "#FFF1C4" : ivory);
+  document.getElementById("lid").setAttribute("stroke", gold ? "#FFF1C4" : ivory);
+  document.getElementById("shine").setAttribute("stroke", gold ? "#FFF8E0" : ivory);
+  document.getElementById("mouth").setAttribute("stroke", gold ? "#3A2606" : ivory);
+  [].forEach.call(document.querySelectorAll(".eye"), function(e){ e.setAttribute("fill", gold ? "#3A2606" : ivory); });
+  [].forEach.call(document.querySelectorAll(".hl"), function(e){ e.setAttribute("fill", gold ? "#FFF8E0" : "#0d0c0a"); });
+  [].forEach.call(document.querySelectorAll(".blush"), function(e){ e.setAttribute("fill", gold ? "rgba(232,53,46,.45)" : "rgba(243,235,216,.28)"); });
+  if (gold) document.getElementById("bar").setAttribute("filter", "url(#glow)");
+  else document.getElementById("halo").style.display = "none";
+
+  // 星尘：带种子的随机数，每次出图一样
+  var seed = 20261020;
+  function rnd(){ seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+  var cv = document.getElementById("dust"); cv.width = W; cv.height = H;
+  var ctx = cv.getContext("2d");
+  var n = Math.round(W * H / 9000);
+  for (var i = 0; i < n; i++) {
+    var x = rnd() * W, y = rnd() * H, big = rnd() < 0.08;
+    var rad = big ? 3 + rnd() * 9 : 0.6 + rnd() * 1.8;
+    var a = big ? 0.08 + rnd() * 0.18 : 0.25 + rnd() * 0.55;
+    var g = ctx.createRadialGradient(x, y, 0, x, y, rad);
+    g.addColorStop(0, "rgba(243,235,216," + a + ")"); g.addColorStop(1, "rgba(243,235,216,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, rad, 0, Math.PI * 2); ctx.fill();
+  }
+})();
+</script>
+</body>
+</html>

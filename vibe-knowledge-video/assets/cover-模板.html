@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>封面</title>
+<!--
+  统一封面模板（博物馆纪录片风格）。每期只改下面 COVER 里的字和图。
+  出图：用无头浏览器截图，见 SKILL.md「第 8 步 · 封面」。
+    横版 16:9：cover.html            窗口 1920x1080
+    竖版 3:4 ：cover.html?r=3x4      窗口 1080x1440
+-->
+<script>
+const COVER = {
+  no: "02",                                  // 第几期
+  topic: "幸存者偏差",                          // 主题名
+  topicEn: "SURVIVORSHIP BIAS",                // 主题英文（大写）
+  kick: "考你一个问题",                          // 标题上方的小字
+  title: "装甲该<span class='r'>加在哪</span>？", // 大标题：≤ 8 个字，红色只标一个词
+  sub: "返航的飞机，机身上弹孔最多",              // 副标题：≤ 16 个字
+  img: "../素材/01-b17-flak.jpg",               // 配图（素材文件夹里的真实图片）
+  imgPos: "50% 32%",                           // 配图取景位置
+  cap: "B-17, 306th Bomb Group · USAAF · Public domain", // 图注（作者 · 许可）
+  seal: "考题",                                 // 火漆封印上的 2 个字
+  year: "MCMXLIII"                             // 图版角上的罗马数字年份
+};
+</script>
+<style>
+  @font-face { font-family: "Noto Serif SC"; src: url("../video/assets/fonts/NotoSerifSC-VF.ttf") format("truetype"); font-weight: 200 900; }
+  :root { --bg: #120d09; --bg2: #1d150e; --gold: #c6a265; --gold-dim: rgba(198,162,101,.5); --ivory: #ece4d4; --red: #8e2a22; --red2: #c4524a; }
+  html, body { margin: 0; background: #000; }
+  #c { position: relative; overflow: hidden; color: var(--ivory); font-family: "Noto Serif SC", serif;
+       background: radial-gradient(70% 70% at 62% 42%, var(--bg2) 0%, var(--bg) 72%); }
+  .frame1, .frame2 { position: absolute; border: 1px solid var(--gold-dim); pointer-events: none; }
+  .frame2 { border-color: rgba(198,162,101,.22); }
+  .corner { position: absolute; width: 11px; height: 11px; background: var(--gold); transform: rotate(45deg); opacity: .8; }
+  .grain { position: absolute; inset: 0; background: url("../video/assets/grain.png") repeat; background-size: 512px; mix-blend-mode: soft-light; opacity: .22; }
+  .vig { position: absolute; inset: 0; background: radial-gradient(100% 90% at 50% 45%, transparent 55%, rgba(0,0,0,.6) 100%); }
+  .brand { position: absolute; font-size: 26px; letter-spacing: 8px; color: var(--gold); font-weight: 600; white-space: nowrap; }
+  .brand b { font-family: "Palatino Linotype", Georgia, serif; font-weight: 400; letter-spacing: 4px; margin-left: 14px; color: rgba(236,228,212,.7); }
+  .brand i { display: block; width: 72px; height: 1px; background: var(--gold); margin-top: 14px; }
+  .topic { font-size: 40px; letter-spacing: 12px; color: var(--gold); font-weight: 600; white-space: nowrap; }
+  .topic em { display: block; font-style: italic; font-family: "Palatino Linotype", Georgia, serif; font-size: 22px; letter-spacing: 7px; color: rgba(236,228,212,.55); font-weight: 400; margin-top: 10px; }
+  .kick { font-size: 34px; letter-spacing: 12px; color: var(--gold); margin-top: 54px; white-space: nowrap; }
+  .title { font-weight: 900; line-height: 1.12; letter-spacing: 4px; margin-top: 18px; white-space: nowrap; text-shadow: 0 6px 30px rgba(0,0,0,.6); }
+  .title .r { color: var(--red2); }
+  .rule { height: 2px; width: 120px; background: var(--red); margin-top: 34px; }
+  .sub { font-size: 40px; letter-spacing: 3px; color: rgba(236,228,212,.82); margin-top: 26px; white-space: nowrap; }
+  .plate { position: absolute; background: #2a2017; padding: 26px; box-sizing: border-box;
+           box-shadow: 0 0 0 1px rgba(198,162,101,.6), 0 40px 90px rgba(0,0,0,.75); }
+  .plate .in { position: relative; width: 100%; height: 100%; overflow: hidden; }
+  .plate img { width: 100%; height: 100%; object-fit: cover; display: block; filter: sepia(.5) saturate(.6) brightness(.78) contrast(1.12); }
+  .plate .yr { position: absolute; right: 40px; top: -18px; background: var(--bg); padding: 0 14px; font-family: "Palatino Linotype", serif; font-size: 22px; letter-spacing: 6px; color: var(--gold); }
+  .cap { position: absolute; font-family: "Palatino Linotype", serif; font-style: italic; font-size: 20px; color: rgba(236,228,212,.5); white-space: nowrap; }
+  .seal { position: absolute; border-radius: 48% 52% 50% 50% / 52% 47% 53% 48%; transform: rotate(-10deg);
+          background: radial-gradient(circle at 38% 32%, #a8382d 0%, #7d221b 55%, #5a1711 100%);
+          box-shadow: 0 14px 30px rgba(0,0,0,.6), inset 0 0 0 7px rgba(0,0,0,.12), inset 0 0 0 11px rgba(255,210,170,.16);
+          display: flex; align-items: center; justify-content: center; color: #f0dcc0; font-weight: 900; letter-spacing: 6px; }
+  .tag { position: absolute; font-family: "Palatino Linotype", serif; font-size: 22px; letter-spacing: 4px; color: rgba(198,162,101,.75); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div id="c">
+  <div class="frame1"></div><div class="frame2"></div>
+  <div class="corner"></div><div class="corner"></div><div class="corner"></div><div class="corner"></div>
+  <div class="plate"><div class="in"><img id="img" alt="" /></div><div class="yr" id="yr"></div></div>
+  <div class="cap" id="cap"></div>
+  <div class="seal" id="seal"></div>
+  <div class="brand" id="brand"></div>
+  <div class="text" id="text" style="position:absolute">
+    <div class="topic" id="topic"></div>
+    <div class="kick" id="kick"></div>
+    <div class="title" id="title"></div>
+    <div class="rule"></div>
+    <div class="sub" id="sub"></div>
+  </div>
+  <div class="tag" id="tag">#vibe知识大赏</div>
+  <div class="vig"></div><div class="grain"></div>
+</div>
+<script>
+  const V = new URLSearchParams(location.search).get("r") === "3x4";
+  const W = V ? 1080 : 1920, H = V ? 1440 : 1080;
+  const $ = (s) => document.querySelector(s), q = (s) => document.querySelectorAll(s);
+  const put = (el, css) => Object.assign(el.style, css);
+  put($("#c"), { width: W + "px", height: H + "px" });
+  put($(".frame1"), { inset: "40px" }); put($(".frame2"), { inset: "50px" });
+  [[36, 36, "left", "top"], [36, 36, "right", "top"], [36, 36, "left", "bottom"], [36, 36, "right", "bottom"]]
+    .forEach(([a, b, h, v], i) => put(q(".corner")[i], { [h]: a + "px", [v]: b + "px" }));
+  $("#img").src = COVER.img; $("#img").style.objectPosition = COVER.imgPos;
+  $("#yr").textContent = COVER.year; $("#cap").textContent = COVER.cap;
+  $("#seal").textContent = COVER.seal;
+  $("#brand").innerHTML = `VIBE 知识大赏<b>No. ${COVER.no}</b><i></i>`;
+  $("#topic").innerHTML = `${COVER.topic}<em>${COVER.topicEn}</em>`;
+  $("#kick").textContent = COVER.kick; $("#title").innerHTML = COVER.title; $("#sub").textContent = COVER.sub;
+  if (!V) {
+    // 横版：左文右图
+    put($(".plate"), { left: "1160px", top: "150px", width: "660px", height: "720px" });
+    put($("#cap"), { left: "1160px", top: "890px" });
+    put($("#seal"), { left: "1060px", top: "700px", width: "190px", height: "190px", fontSize: "46px" });
+    put($("#brand"), { left: "110px", top: "100px" });
+    put($("#text"), { left: "110px", top: "250px" });
+    put($("#title"), { fontSize: "140px" });
+    put($("#tag"), { left: "110px", bottom: "92px" });
+  } else {
+    // 竖版：上图下文
+    put($(".plate"), { left: "110px", top: "180px", width: "860px", height: "600px" });
+    put($("#cap"), { left: "110px", top: "798px" });
+    put($("#seal"), { left: "800px", top: "640px", width: "170px", height: "170px", fontSize: "42px" });
+    put($("#brand"), { left: "110px", top: "92px" });
+    put($("#text"), { left: "110px", top: "870px" });
+    put($(".kick"), { marginTop: "34px" });
+    put($("#title"), { fontSize: "128px" });
+    put($("#tag"), { right: "110px", bottom: "86px" });
+  }
+</script>
+</body>
+</html>
